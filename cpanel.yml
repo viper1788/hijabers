@@ -1,5 +1,7 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/$(whoami)/public_html/
-    - /bin/cp -R dist/* $DEPLOYPATH
+    - export DEPLOYPATH=/home/hijab872/public_html/
+    - /bin/cp -R dist/assets $DEPLOYPATH
+    - /bin/cp dist/index.html $DEPLOYPATH
+    - /bin/cp dist/logo.png $DEPLOYPATH
