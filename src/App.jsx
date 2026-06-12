@@ -9,6 +9,7 @@ import ProductDetail from './pages/ProductDetail.jsx'
 import CartCheckout from './pages/CartCheckout.jsx'
 import Admin from './pages/Admin.jsx'
 import About from './pages/About.jsx'
+import NotFound from './pages/NotFound.jsx'
 
 function Layout() {
   const location = useLocation()
@@ -23,6 +24,7 @@ function Layout() {
         <Route path="/cart" element={<CartCheckout />} />
         <Route path="/about" element={<About />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
       {!isAdmin && <Footer />}
     </>
