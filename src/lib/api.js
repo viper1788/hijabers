@@ -1,10 +1,30 @@
 import { supabase } from './supabase.js'
 
 // ─────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────
+
+export async function signIn(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) throw error
+  return data
+}
+
+export async function signOut() {
+  const { error } = await supabase.auth.signOut()
+  if (error) throw error
+}
+
+export async function getSession() {
+  const { data, error } = await supabase.auth.getSession()
+  if (error) throw error
+  return data.session
+}
+
+// ─────────────────────────────────────────
 // PRODUCTS
 // ─────────────────────────────────────────
 
-// Get all products
 export async function getAllProducts() {
   const { data, error } = await supabase
     .from('products')
@@ -14,7 +34,6 @@ export async function getAllProducts() {
   return data
 }
 
-// Get products by category
 export async function getProductsByCategory(category) {
   const { data, error } = await supabase
     .from('products')
@@ -25,7 +44,6 @@ export async function getProductsByCategory(category) {
   return data
 }
 
-// Get single product by slug
 export async function getProductBySlug(slug) {
   const { data, error } = await supabase
     .from('products')
@@ -36,7 +54,6 @@ export async function getProductBySlug(slug) {
   return data
 }
 
-// Get featured/badge products
 export async function getFeaturedProducts() {
   const { data, error } = await supabase
     .from('products')
@@ -48,7 +65,6 @@ export async function getFeaturedProducts() {
   return data
 }
 
-// Search products
 export async function searchProducts(query) {
   const { data, error } = await supabase
     .from('products')
@@ -58,7 +74,6 @@ export async function searchProducts(query) {
   return data
 }
 
-// Admin: Create product
 export async function createProduct(product) {
   const { data, error } = await supabase
     .from('products')
@@ -68,7 +83,6 @@ export async function createProduct(product) {
   return data[0]
 }
 
-// Admin: Update product
 export async function updateProduct(id, updates) {
   const { data, error } = await supabase
     .from('products')
@@ -79,7 +93,6 @@ export async function updateProduct(id, updates) {
   return data[0]
 }
 
-// Admin: Delete product
 export async function deleteProduct(id) {
   const { error } = await supabase
     .from('products')
@@ -93,14 +106,12 @@ export async function deleteProduct(id) {
 // ORDERS
 // ─────────────────────────────────────────
 
-// Generate order code
 function generateOrderCode() {
   const timestamp = Date.now().toString().slice(-6)
   const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
   return `HC-${timestamp}${random}`
 }
 
-// Create new order
 export async function createOrder(orderData) {
   const order = {
     ...orderData,
@@ -115,7 +126,6 @@ export async function createOrder(orderData) {
   return data[0]
 }
 
-// Get all orders (admin)
 export async function getAllOrders() {
   const { data, error } = await supabase
     .from('orders')
@@ -125,7 +135,6 @@ export async function getAllOrders() {
   return data
 }
 
-// Get single order by id
 export async function getOrderById(id) {
   const { data, error } = await supabase
     .from('orders')
@@ -136,7 +145,6 @@ export async function getOrderById(id) {
   return data
 }
 
-// Admin: Update order status
 export async function updateOrderStatus(id, status) {
   const { data, error } = await supabase
     .from('orders')
@@ -148,7 +156,7 @@ export async function updateOrderStatus(id, status) {
 }
 
 // ─────────────────────────────────────────
-// WHATSAPP NOTIFICATION
+// WHATSAPP
 // ─────────────────────────────────────────
 
 export function buildWhatsAppMessage(order) {

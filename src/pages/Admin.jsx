@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { getAllOrders, updateOrderStatus, getAllProducts, createProduct, updateProduct, deleteProduct } from '../lib/api.js'
+import { getAllOrders, updateOrderStatus, getAllProducts, createProduct, updateProduct, deleteProduct, signIn, signOut, getSession } from '../lib/api.js'
 import { CATEGORIES } from '../data/products.js'
 
 const G = "#C1983C", D = "#2A1F0E", C = "#FDFBF7", LB = "#F7F2E8"
 const serif = "'Cormorant Garamond',serif"
 const sans = "'Didact Gothic',sans-serif"
-
-const ADMIN_EMAIL = 'admin@hijabers.id'
-const ADMIN_PASSWORD = 'hijabers2026'
 
 const STATUS = {
   baru: { bg:'#FEF3C7', color:'#92400E', label:'Baru' },
@@ -47,16 +44,18 @@ function LoginScreen({ onLogin }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  function handleLogin() {
+  async function handleLogin() {
+    if (!email || !password) { setError('Email dan password wajib diisi'); return }
     setLoading(true)
-    setTimeout(() => {
-      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        onLogin()
-      } else {
-        setError('Email atau password salah!')
-      }
+    setError('')
+    try {
+      await signIn(email, password)
+      onLogin()
+    } catch (err) {
+      setError('Email atau password salah!')
+    } finally {
       setLoading(false)
-    }, 600)
+    }
   }
 
   return (
@@ -70,23 +69,41 @@ function LoginScreen({ onLogin }) {
 
         <div style={{ marginBottom:16 }}>
           <label className="form-label">Email</label>
-          <input value={email} onChange={e=>setEmail(e.target.value)} type="email"
-            className="form-input" placeholder="admin@hijabers.id"
-            onKeyDown={e=>e.key==='Enter'&&handleLogin()} />
+          <input
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            type="email"
+            className="form-input"
+            placeholder="Masukkan email"
+            onKeyDown={e => e.key === 'Enter' && handleLogin()}
+            autoComplete="off"
+          />
         </div>
 
         <div style={{ marginBottom:24 }}>
           <label className="form-label">Password</label>
-          <input value={password} onChange={e=>setPassword(e.target.value)} type="password"
-            className="form-input" placeholder="••••••••"
-            onKeyDown={e=>e.key==='Enter'&&handleLogin()} />
+          <input
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            type="password"
+            className="form-input"
+            placeholder="Masukkan password"
+            onKeyDown={e => e.key === 'Enter' && handleLogin()}
+            autoComplete="off"
+          />
         </div>
 
-        {error && <div style={{ background:'#FEE2E2', color:'#991B1B', padding:'10px 16px', borderRadius:4, fontSize:12, marginBottom:16 }}>{error}</div>}
+        {error && (
+          <div style={{ background:'#FEE2E2', color:'#991B1B', padding:'10px 16px', borderRadius:4, fontSize:12, marginBottom:16 }}>
+            {error}
+          </div>
+        )}
 
         <button onClick={handleLogin} disabled={loading}
-          style={{ width:'100%', padding:'14px', background:`linear-gradient(135deg,${G},#D4AA50,${G})`, color:C, border:'none', borderRadius:4, fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans, boxShadow:'0 6px 20px rgba(193,152,60,0.3)', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-          {loading ? <><div style={{ width:16, height:16, border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid white', borderRadius:'50%', animation:'spin 1s linear infinite' }} />Masuk...</> : 'Masuk'}
+          style={{ width:'100%', padding:'14px', background:`linear-gradient(135deg,${G},#D4AA50,${G})`, color:C, border:'none', borderRadius:4, fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor: loading?'not-allowed':'pointer', fontFamily:sans, boxShadow:'0 6px 20px rgba(193,152,60,0.3)', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+          {loading ? (
+            <><div style={{ width:16, height:16, border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid white', borderRadius:'50%', animation:'spin 1s linear infinite' }} />Masuk...</>
+          ) : 'Masuk'}
         </button>
       </div>
     </div>
@@ -111,7 +128,6 @@ function OrdersTab({ orders, onStatusChange }) {
         ))}
       </div>
 
-      {/* Order Detail Modal */}
       {selected && (
         <div style={{ position:'fixed', inset:0, background:'rgba(42,31,14,0.5)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
           <div style={{ background:C, borderRadius:12, padding:'32px', width:'100%', maxWidth:480, boxShadow:'0 24px 80px rgba(0,0,0,0.2)', maxHeight:'90vh', overflowY:'auto' }}>
@@ -124,14 +140,7 @@ function OrdersTab({ orders, onStatusChange }) {
             </div>
 
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:20 }}>
-              {[
-                ['Customer', selected.customer_name],
-                ['HP/WA', selected.customer_phone],
-                ['Kota', selected.customer_city],
-                ['Provinsi', selected.customer_province],
-                ['Zona', ZONES_LABEL[selected.zone]||selected.zone],
-                ['Total', `Rp ${(selected.total||0).toLocaleString('id-ID')}`],
-              ].map(([lbl,val]) => (
+              {[['Customer',selected.customer_name],['HP/WA',selected.customer_phone],['Kota',selected.customer_city],['Provinsi',selected.customer_province],['Zona',ZONES_LABEL[selected.zone]||selected.zone],['Total',`Rp ${(selected.total||0).toLocaleString('id-ID')}`]].map(([lbl,val]) => (
                 <div key={lbl} style={{ background:LB, borderRadius:6, padding:'10px 14px' }}>
                   <div style={{ fontSize:9, color:'#9A8060', letterSpacing:'0.15em', textTransform:'uppercase', marginBottom:3 }}>{lbl}</div>
                   <div style={{ fontSize:13, color:D, fontWeight:600 }}>{val}</div>
@@ -139,13 +148,11 @@ function OrdersTab({ orders, onStatusChange }) {
               ))}
             </div>
 
-            {/* Full address */}
             <div style={{ background:LB, borderRadius:6, padding:'10px 14px', marginBottom:16 }}>
               <div style={{ fontSize:9, color:'#9A8060', letterSpacing:'0.15em', textTransform:'uppercase', marginBottom:3 }}>Alamat</div>
               <div style={{ fontSize:12, color:D }}>{selected.customer_address}</div>
             </div>
 
-            {/* Items */}
             <div style={{ marginBottom:16 }}>
               <div style={{ fontSize:9, color:'#9A8060', letterSpacing:'0.15em', textTransform:'uppercase', marginBottom:10 }}>Produk Dipesan</div>
               {(selected.items||[]).map((item,i) => (
@@ -171,7 +178,6 @@ function OrdersTab({ orders, onStatusChange }) {
               </div>
             )}
 
-            {/* Status update */}
             <div style={{ marginBottom:16 }}>
               <div style={{ fontSize:9, color:'#9A8060', letterSpacing:'0.15em', textTransform:'uppercase', marginBottom:8 }}>Update Status</div>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
@@ -193,7 +199,6 @@ function OrdersTab({ orders, onStatusChange }) {
         </div>
       )}
 
-      {/* Table */}
       <div style={{ background:C, borderRadius:8, border:'1px solid rgba(193,152,60,0.12)', overflow:'hidden' }}>
         <div style={{ overflowX:'auto' }}>
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
@@ -265,7 +270,6 @@ function ProductsTab({ products, onAdd, onEdit, onDelete }) {
         </button>
       </div>
 
-      {/* Form Modal */}
       {showForm && (
         <div style={{ position:'fixed', inset:0, background:'rgba(42,31,14,0.5)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
           <div style={{ background:C, borderRadius:12, padding:'32px', width:'100%', maxWidth:480, boxShadow:'0 24px 80px rgba(0,0,0,0.2)', maxHeight:'90vh', overflowY:'auto' }}>
@@ -273,7 +277,6 @@ function ProductsTab({ products, onAdd, onEdit, onDelete }) {
               <h2 style={{ fontSize:20, fontFamily:serif, color:D }}>{editItem?'Edit Produk':'Tambah Produk'}</h2>
               <button onClick={() => setShowForm(false)} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:'#9A8060' }}>✕</button>
             </div>
-
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
               {[
                 { label:'Nama Produk *', key:'name', placeholder:'Linen Wide Pants' },
@@ -283,18 +286,15 @@ function ProductsTab({ products, onAdd, onEdit, onDelete }) {
               ].map(f => (
                 <div key={f.key}>
                   <label className="form-label">{f.label}</label>
-                  <input type={f.type||'text'} value={form[f.key]} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))}
-                    className="form-input" placeholder={f.placeholder} />
+                  <input type={f.type||'text'} value={form[f.key]} onChange={e=>setForm(p=>({...p,[f.key]:e.target.value}))} className="form-input" placeholder={f.placeholder} />
                 </div>
               ))}
-
               <div>
                 <label className="form-label">Kategori</label>
                 <select value={form.category} onChange={e=>setForm(p=>({...p,category:e.target.value}))} className="form-input" style={{ cursor:'pointer' }}>
                   {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
-
               <div>
                 <label className="form-label">Badge (opsional)</label>
                 <select value={form.badge} onChange={e=>setForm(p=>({...p,badge:e.target.value}))} className="form-input" style={{ cursor:'pointer' }}>
@@ -304,14 +304,11 @@ function ProductsTab({ products, onAdd, onEdit, onDelete }) {
                   <option value="Sale">Sale</option>
                 </select>
               </div>
-
               <div>
                 <label className="form-label">Deskripsi</label>
-                <textarea value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))}
-                  className="form-input" rows={3} placeholder="Deskripsi produk..." style={{ resize:'vertical' }} />
+                <textarea value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} className="form-input" rows={3} placeholder="Deskripsi produk..." style={{ resize:'vertical' }} />
               </div>
             </div>
-
             <div style={{ display:'flex', gap:12, marginTop:24 }}>
               <button onClick={() => setShowForm(false)} style={{ flex:1, padding:'12px', border:'1px solid rgba(193,152,60,0.3)', borderRadius:4, background:'transparent', color:D, fontSize:11, letterSpacing:'0.15em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans }}>Batal</button>
               <button onClick={handleSave} style={{ flex:2, padding:'12px', background:`linear-gradient(135deg,${G},#D4AA50)`, color:C, border:'none', borderRadius:4, fontSize:11, letterSpacing:'0.15em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans }}>
@@ -322,7 +319,6 @@ function ProductsTab({ products, onAdd, onEdit, onDelete }) {
         </div>
       )}
 
-      {/* Product Grid */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:16 }}>
         {products.length === 0 ? (
           <div style={{ gridColumn:'1/-1', textAlign:'center', padding:'64px', color:'#9A8060' }}>
@@ -360,6 +356,7 @@ function ProductsTab({ products, onAdd, onEdit, onDelete }) {
 // ── MAIN ADMIN ──
 export default function Admin() {
   const [loggedIn, setLoggedIn] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(true)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [orders, setOrders] = useState([])
   const [products, setProducts] = useState([])
@@ -367,6 +364,18 @@ export default function Admin() {
   const [toast, setToast] = useState(null)
 
   const showToast = (msg, type='success') => setToast({ msg, type })
+
+  // Check existing session on load
+  useEffect(() => {
+    async function checkSession() {
+      try {
+        const session = await getSession()
+        if (session) setLoggedIn(true)
+      } catch {}
+      finally { setCheckingSession(false) }
+    }
+    checkSession()
+  }, [])
 
   useEffect(() => { if (loggedIn) loadData() }, [loggedIn])
 
@@ -378,6 +387,13 @@ export default function Admin() {
       setProducts(p || [])
     } catch { showToast('Gagal memuat data', 'error') }
     finally { setLoading(false) }
+  }
+
+  async function handleLogout() {
+    try { await signOut() } catch {}
+    setLoggedIn(false)
+    setOrders([])
+    setProducts([])
   }
 
   async function handleStatusChange(id, status) {
@@ -413,6 +429,12 @@ export default function Admin() {
     } catch { showToast('Gagal hapus produk', 'error') }
   }
 
+  if (checkingSession) return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'linear-gradient(160deg,#FDFBF7 0%,#F5EDD8 55%,#EDE0C4 100%)' }}>
+      <div style={{ width:32, height:32, border:`3px solid rgba(193,152,60,0.2)`, borderTop:`3px solid ${G}`, borderRadius:'50%', animation:'spin 1s linear infinite' }} />
+    </div>
+  )
+
   if (!loggedIn) return <LoginScreen onLogin={() => setLoggedIn(true)} />
 
   const tabs = [
@@ -429,9 +451,15 @@ export default function Admin() {
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* SIDEBAR */}
-      <div style={{ width:220, background:D, position:'fixed', top:0, left:0, height:'100vh', display:'flex', flexDirection:'column', zIndex:50 }}>
-        <style>{`@media(max-width:768px){.admin-sidebar{display:none !important} .admin-main{margin-left:0 !important} .admin-mobile-tabs{display:flex !important}}`}</style>
-        <div className="admin-sidebar" style={{ padding:'28px 24px 20px', borderBottom:'1px solid rgba(193,152,60,0.15)' }}>
+      <div className="admin-sidebar" style={{ width:220, background:D, position:'fixed', top:0, left:0, height:'100vh', display:'flex', flexDirection:'column', zIndex:50 }}>
+        <style>{`
+          @media(max-width:768px){
+            .admin-sidebar{display:none !important}
+            .admin-main{margin-left:0 !important}
+            .admin-mobile-tabs{display:flex !important}
+          }
+        `}</style>
+        <div style={{ padding:'28px 24px 20px', borderBottom:'1px solid rgba(193,152,60,0.15)' }}>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <img src="/logo.png" alt="h" style={{ width:32, height:32, objectFit:'contain' }} />
             <div>
@@ -440,7 +468,7 @@ export default function Admin() {
             </div>
           </div>
         </div>
-        <nav style={{ flex:1, padding:'16px 12px' }} className="admin-sidebar">
+        <nav style={{ flex:1, padding:'16px 12px' }}>
           {tabs.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
               style={{ width:'100%', display:'flex', alignItems:'center', gap:12, padding:'11px 16px', borderRadius:6, border:'none', cursor:'pointer', marginBottom:4, background: activeTab===tab.id ? 'rgba(193,152,60,0.15)' : 'transparent', color: activeTab===tab.id ? G : 'rgba(253,251,247,0.55)', fontSize:12, fontFamily:sans, textAlign:'left', transition:'all 0.2s' }}>
@@ -449,8 +477,8 @@ export default function Admin() {
             </button>
           ))}
         </nav>
-        <div style={{ padding:'16px 12px', borderTop:'1px solid rgba(193,152,60,0.1)' }} className="admin-sidebar">
-          <button onClick={() => setLoggedIn(false)} style={{ width:'100%', display:'flex', alignItems:'center', gap:12, padding:'11px 16px', borderRadius:6, border:'none', cursor:'pointer', background:'transparent', color:'rgba(253,251,247,0.4)', fontSize:12, fontFamily:sans }}>
+        <div style={{ padding:'16px 12px', borderTop:'1px solid rgba(193,152,60,0.1)' }}>
+          <button onClick={handleLogout} style={{ width:'100%', display:'flex', alignItems:'center', gap:12, padding:'11px 16px', borderRadius:6, border:'none', cursor:'pointer', background:'transparent', color:'rgba(253,251,247,0.4)', fontSize:12, fontFamily:sans }}>
             🚪 Logout
           </button>
         </div>
@@ -466,7 +494,7 @@ export default function Admin() {
               {tab.icon} {tab.label}
             </button>
           ))}
-          <button onClick={() => setLoggedIn(false)} style={{ padding:'8px 16px', borderRadius:20, border:'1px solid #FCA5A5', cursor:'pointer', background:'transparent', color:'#DC2626', fontSize:11, fontFamily:sans, whiteSpace:'nowrap', flexShrink:0 }}>🚪 Logout</button>
+          <button onClick={handleLogout} style={{ padding:'8px 16px', borderRadius:20, border:'1px solid #FCA5A5', cursor:'pointer', background:'transparent', color:'#DC2626', fontSize:11, fontFamily:sans, whiteSpace:'nowrap', flexShrink:0 }}>🚪 Logout</button>
         </div>
 
         {loading ? (
@@ -476,7 +504,6 @@ export default function Admin() {
           </div>
         ) : (
           <>
-            {/* DASHBOARD */}
             {activeTab === 'dashboard' && (
               <div>
                 <div style={{ marginBottom:28 }}>
@@ -489,7 +516,6 @@ export default function Admin() {
                   <StatCard icon="🧥" label="Produk" value={products.length} sub="Terdaftar" />
                   <StatCard icon="💰" label="Revenue" value={`Rp ${(totalRevenue/1000).toFixed(0)}k`} sub="Order selesai" />
                 </div>
-                {/* Recent orders */}
                 <div style={{ background:C, borderRadius:8, border:'1px solid rgba(193,152,60,0.12)', overflow:'hidden' }}>
                   <div style={{ padding:'16px 20px', borderBottom:'1px solid rgba(193,152,60,0.1)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                     <h2 style={{ fontSize:16, fontWeight:400, fontFamily:serif, color:D }}>Order Terbaru</h2>
