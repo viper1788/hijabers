@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { getAllOrders, updateOrderStatus, getAllProducts, createProduct, updateProduct, deleteProduct, signIn, signOut, getSession } from '../lib/api.js'
-import { supabase } from '../lib/supabase.js'
 import { CATEGORIES } from '../data/products.js'
 
 const G = "#C1983C", D = "#2A1F0E", C = "#FDFBF7", LB = "#F7F2E8"
 const serif = "'Cormorant Garamond',serif"
 const sans = "'Didact Gothic',sans-serif"
+const BASE_URL = 'https://hijabers.id'
 
 const STATUS = {
   baru: { bg:'#FEF3C7', color:'#92400E', label:'Baru' },
@@ -13,38 +13,18 @@ const STATUS = {
   dikirim: { bg:'#D1FAE5', color:'#065F46', label:'Dikirim' },
   selesai: { bg:'#F3F4F6', color:'#374151', label:'Selesai' },
 }
-
-const ZONES_LABEL = {
-  zona1:'Jawa & Bali', zona2:'Sumatera/Kal/Sul', zona3:'NTB/NTT/Maluku', zona4:'Papua'
-}
-
+const ZONES_LABEL = { zona1:'Jawa & Bali', zona2:'Sumatera/Kal/Sul', zona3:'NTB/NTT/Maluku', zona4:'Papua' }
 const PRESET_COLORS = [
-  { name:'Cream', hex:'#F5ECD7' },
-  { name:'Sage Green', hex:'#A8B59C' },
-  { name:'Dusty Rose', hex:'#E8C5C8' },
-  { name:'Warm Brown', hex:'#C9A882' },
-  { name:'Off White', hex:'#F0EDE8' },
-  { name:'Classic Black', hex:'#2B2B2B' },
-  { name:'Navy', hex:'#1B2A4A' },
-  { name:'Mocha', hex:'#8B6B4A' },
+  { name:'Cream', hex:'#F5ECD7' },{ name:'Sage Green', hex:'#A8B59C' },
+  { name:'Dusty Rose', hex:'#E8C5C8' },{ name:'Warm Brown', hex:'#C9A882' },
+  { name:'Off White', hex:'#F0EDE8' },{ name:'Classic Black', hex:'#2B2B2B' },
+  { name:'Navy', hex:'#1B2A4A' },{ name:'Mocha', hex:'#8B6B4A' },
 ]
-
-// ── UPLOAD IMAGE TO SUPABASE STORAGE ──
-async function uploadImage(file, folder = 'general') {
-  const ext = file.name.split('.').pop()
-  const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-  const { data, error } = await supabase.storage.from('products').upload(fileName, file, {
-    cacheControl: '3600', upsert: false
-  })
-  if (error) throw error
-  const { data: urlData } = supabase.storage.from('products').getPublicUrl(fileName)
-  return urlData.publicUrl
-}
 
 function Toast({ msg, type, onClose }) {
   useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t) }, [])
   return (
-    <div style={{ position:'fixed', top:24, right:24, zIndex:9999, background: type==='error'?'#991B1B':D, color:C, padding:'12px 20px', borderRadius:8, fontSize:12, fontFamily:sans, boxShadow:'0 8px 32px rgba(0,0,0,0.2)', display:'flex', alignItems:'center', gap:8 }}>
+    <div style={{ position:'fixed', top:24, right:24, zIndex:9999, background:type==='error'?'#991B1B':D, color:C, padding:'12px 20px', borderRadius:8, fontSize:12, fontFamily:sans, boxShadow:'0 8px 32px rgba(0,0,0,0.2)', display:'flex', alignItems:'center', gap:8 }}>
       {type==='error'?'❌':'✅'} {msg}
     </div>
   )
@@ -52,9 +32,9 @@ function Toast({ msg, type, onClose }) {
 
 function StatCard({ icon, label, value, sub, highlight }) {
   return (
-    <div style={{ background:C, borderRadius:8, padding:'20px', border:`1px solid ${highlight?'rgba(193,152,60,0.35)':'rgba(193,152,60,0.12)'}`, boxShadow: highlight?'0 4px 20px rgba(193,152,60,0.12)':'0 2px 8px rgba(42,31,14,0.04)' }}>
+    <div style={{ background:C, borderRadius:8, padding:'20px', border:`1px solid ${highlight?'rgba(193,152,60,0.35)':'rgba(193,152,60,0.12)'}`, boxShadow:highlight?'0 4px 20px rgba(193,152,60,0.12)':'0 2px 8px rgba(42,31,14,0.04)' }}>
       <div style={{ fontSize:28, marginBottom:10 }}>{icon}</div>
-      <div style={{ fontSize:24, fontWeight:600, fontFamily:serif, color: highlight?G:D, marginBottom:4 }}>{value}</div>
+      <div style={{ fontSize:24, fontWeight:600, fontFamily:serif, color:highlight?G:D, marginBottom:4 }}>{value}</div>
       <div style={{ fontSize:11, fontWeight:700, color:D, marginBottom:2 }}>{label}</div>
       <div style={{ fontSize:10, color:'#9A8060' }}>{sub}</div>
     </div>
@@ -94,9 +74,123 @@ function LoginScreen({ onLogin }) {
         </div>
         {error && <div style={{ background:'#FEE2E2', color:'#991B1B', padding:'10px 16px', borderRadius:4, fontSize:12, marginBottom:16 }}>{error}</div>}
         <button onClick={handleLogin} disabled={loading} style={{ width:'100%', padding:'14px', background:`linear-gradient(135deg,${G},#D4AA50,${G})`, color:C, border:'none', borderRadius:4, fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor:loading?'not-allowed':'pointer', fontFamily:sans, boxShadow:'0 6px 20px rgba(193,152,60,0.3)', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-          {loading ? <><div style={{ width:16, height:16, border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid white', borderRadius:'50%', animation:'spin 1s linear infinite' }} />Masuk...</> : 'Masuk'}
+          {loading?<><div style={{ width:16, height:16, border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid white', borderRadius:'50%', animation:'spin 1s linear infinite' }} />Masuk...</>:'Masuk'}
         </button>
       </div>
+    </div>
+  )
+}
+
+// ── IMAGE FOLDER BROWSER ──
+function FolderBrowser({ onSelectImages, onSelectColorImage, colorImages, selectedMainImages }) {
+  const [folder, setFolder] = useState('')
+  const [folderInput, setFolderInput] = useState('')
+  const [images, setImages] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [assigningColor, setAssigningColor] = useState(null)
+
+  async function loadFolder() {
+    if (!folderInput.trim()) return
+    setLoading(true); setError('')
+    try {
+      const res = await fetch(`${BASE_URL}/list-images.php?folder=${encodeURIComponent(folderInput.trim())}`)
+      const data = await res.json()
+      if (data.error) { setError(data.error); setImages([]) }
+      else { setImages(data.images || []); setFolder(folderInput.trim()) }
+    } catch { setError('Tidak bisa connect ke server. Pastikan list-images.php sudah diupload.') }
+    finally { setLoading(false) }
+  }
+
+  function toggleMainImage(img) {
+    const isSelected = selectedMainImages.includes(img.url)
+    if (isSelected) onSelectImages(selectedMainImages.filter(u => u !== img.url))
+    else onSelectImages([...selectedMainImages, img.url])
+  }
+
+  function assignToColor(img) {
+    if (!assigningColor) return
+    onSelectColorImage(assigningColor, img.url)
+    setAssigningColor(null)
+  }
+
+  return (
+    <div>
+      {/* Folder input */}
+      <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+        <input value={folderInput} onChange={e=>setFolderInput(e.target.value)}
+          className="form-input" placeholder="nama-folder (contoh: linen-wide-pants)"
+          onKeyDown={e=>e.key==='Enter'&&loadFolder()}
+          style={{ flex:1 }} />
+        <button onClick={loadFolder} disabled={loading}
+          style={{ padding:'10px 20px', background:D, color:C, border:'none', borderRadius:4, fontSize:11, cursor:'pointer', fontFamily:sans, whiteSpace:'nowrap' }}>
+          {loading ? '⏳' : '📂 Load'}
+        </button>
+      </div>
+
+      <p style={{ fontSize:10, color:'#9A8060', marginBottom:12 }}>
+        Upload foto ke: <strong>public_html/uploads/products/[nama-folder]/</strong> via cPanel File Manager
+      </p>
+
+      {error && <div style={{ background:'#FEE2E2', color:'#991B1B', padding:'10px', borderRadius:4, fontSize:12, marginBottom:12 }}>{error}</div>}
+
+      {images.length > 0 && (
+        <div>
+          {/* Mode selector */}
+          <div style={{ display:'flex', gap:8, marginBottom:12, alignItems:'center', flexWrap:'wrap' }}>
+            <button onClick={() => setAssigningColor(null)}
+              style={{ padding:'6px 14px', borderRadius:20, border:`1px solid`, borderColor: assigningColor===null?D:'rgba(193,152,60,0.2)', background:assigningColor===null?D:'transparent', color:assigningColor===null?C:D, fontSize:11, cursor:'pointer', fontFamily:sans }}>
+              ☑️ Pilih Foto Utama
+            </button>
+            {colorImages.map(c => (
+              <button key={c.name} onClick={() => setAssigningColor(c.name)}
+                style={{ padding:'6px 14px', borderRadius:20, border:`2px solid`, borderColor:assigningColor===c.name?G:'rgba(193,152,60,0.2)', background:assigningColor===c.name?'rgba(193,152,60,0.1)':'transparent', color:D, fontSize:11, cursor:'pointer', fontFamily:sans, display:'flex', alignItems:'center', gap:6 }}>
+                <div style={{ width:10, height:10, borderRadius:'50%', background:c.hex }} />
+                {c.name} {c.image_url && '✅'}
+              </button>
+            ))}
+          </div>
+
+          {assigningColor && (
+            <div style={{ background:'#FFFBEB', border:'1px solid #FCD34D', borderRadius:4, padding:'8px 12px', fontSize:11, color:'#92400E', marginBottom:12 }}>
+              📌 Pilih foto yang mewakili warna <strong>{assigningColor}</strong>
+            </div>
+          )}
+
+          {/* Image grid */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))', gap:8 }}>
+            {images.map((img, i) => {
+              const isMain = selectedMainImages.includes(img.url)
+              const isColorAssigned = colorImages.find(c => c.image_url === img.url)
+              return (
+                <div key={i} onClick={() => assigningColor ? assignToColor(img) : toggleMainImage(img)}
+                  style={{ position:'relative', cursor:'pointer', borderRadius:4, overflow:'hidden', border:`2px solid`, borderColor: isMain?G:isColorAssigned?'#6B9B6B':'transparent', transition:'all 0.2s' }}
+                  onMouseEnter={e=>e.currentTarget.style.opacity='0.85'}
+                  onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+                  <img src={img.url} alt={img.filename} style={{ width:'100%', aspectRatio:'1', objectFit:'cover', display:'block' }} />
+                  {/* Badges */}
+                  {isMain && (
+                    <div style={{ position:'absolute', top:4, left:4, background:G, color:C, fontSize:8, padding:'2px 5px', borderRadius:2 }}>
+                      #{selectedMainImages.indexOf(img.url)+1}
+                    </div>
+                  )}
+                  {isColorAssigned && (
+                    <div style={{ position:'absolute', top:4, right:4, background:'#6B9B6B', color:C, fontSize:8, padding:'2px 5px', borderRadius:2 }}>
+                      {isColorAssigned.name.split(' ')[0]}
+                    </div>
+                  )}
+                  <div style={{ position:'absolute', bottom:0, left:0, right:0, background:'rgba(0,0,0,0.5)', padding:'2px 4px' }}>
+                    <div style={{ fontSize:8, color:'rgba(255,255,255,0.8)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{img.filename}</div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          <p style={{ fontSize:10, color:'#9A8060', marginTop:8 }}>
+            {selectedMainImages.length} foto utama dipilih · Klik foto untuk pilih/batal sebagai foto utama
+          </p>
+        </div>
+      )}
     </div>
   )
 }
@@ -113,187 +207,130 @@ function ProductForm({ editItem, onSave, onClose }) {
     badge: editItem?.badge || '',
     sizes: editItem?.sizes ? (Array.isArray(editItem.sizes) ? editItem.sizes.join(', ') : '') : '',
   })
-
-  const [images, setImages] = useState(editItem?.images || [])
+  const [selectedMainImages, setSelectedMainImages] = useState(editItem?.images || [])
   const [colorImages, setColorImages] = useState(editItem?.color_images || [])
   const [newColor, setNewColor] = useState({ name:'', hex:'#F5ECD7' })
-  const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const mainImgRef = useRef()
-  const colorImgRefs = useRef({})
 
-  // Upload main images
-  async function handleMainImages(files) {
-    setUploading(true)
-    try {
-      const urls = await Promise.all(Array.from(files).map(f => uploadImage(f, 'main')))
-      setImages(prev => [...prev, ...urls])
-    } catch { alert('Gagal upload foto') }
-    finally { setUploading(false) }
-  }
-
-  // Upload color image
-  async function handleColorImage(file, colorName) {
-    setUploading(true)
-    try {
-      const url = await uploadImage(file, 'colors')
-      setColorImages(prev => prev.map(c => c.name === colorName ? { ...c, image_url: url } : c))
-    } catch { alert('Gagal upload foto warna') }
-    finally { setUploading(false) }
-  }
-
-  // Add color
   function addColor() {
     if (!newColor.name.trim()) return
     if (colorImages.find(c => c.name === newColor.name)) return
-    setColorImages(prev => [...prev, { name: newColor.name.trim(), hex: newColor.hex, image_url: null }])
+    setColorImages(prev => [...prev, { name:newColor.name.trim(), hex:newColor.hex, image_url:null }])
     setNewColor({ name:'', hex:'#F5ECD7' })
   }
 
-  // Remove color
-  function removeColor(name) {
-    setColorImages(prev => prev.filter(c => c.name !== name))
-  }
+  function removeColor(name) { setColorImages(prev => prev.filter(c => c.name !== name)) }
 
-  // Remove main image
-  function removeImage(url) {
-    setImages(prev => prev.filter(i => i !== url))
+  function handleColorImage(colorName, url) {
+    setColorImages(prev => prev.map(c => c.name===colorName ? {...c, image_url:url} : c))
   }
 
   async function handleSave() {
     if (!form.name || !form.price || !form.stock) { alert('Nama, harga, dan stok wajib diisi!'); return }
     setSaving(true)
     try {
-      const sizesArray = form.sizes ? form.sizes.split(',').map(s => s.trim()).filter(Boolean) : []
+      const sizesArray = form.sizes ? form.sizes.split(',').map(s=>s.trim()).filter(Boolean) : []
       const data = {
         name: form.name,
         category: form.category,
         price: Number(form.price),
         stock: Number(form.stock),
-        weight: Number(form.weight) || 300,
+        weight: Number(form.weight)||300,
         description: form.description,
-        badge: form.badge || null,
+        badge: form.badge||null,
         slug: form.name.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,''),
         sizes: sizesArray,
-        colors: colorImages.map(c => c.name),
-        images: images,
+        colors: colorImages.map(c=>c.name),
+        images: selectedMainImages,
         color_images: colorImages,
         bg: 'linear-gradient(145deg,#F0E4C8,#E8D5A8)',
       }
       await onSave(data)
       onClose()
-    } catch (e) { alert('Gagal simpan: ' + e.message) }
+    } catch(e) { alert('Gagal simpan: '+e.message) }
     finally { setSaving(false) }
   }
 
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(42,31,14,0.5)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:24, overflowY:'auto' }}>
-      <div style={{ background:C, borderRadius:12, padding:'32px', width:'100%', maxWidth:560, boxShadow:'0 24px 80px rgba(0,0,0,0.2)', maxHeight:'90vh', overflowY:'auto' }}>
+      <div style={{ background:C, borderRadius:12, padding:'32px', width:'100%', maxWidth:640, boxShadow:'0 24px 80px rgba(0,0,0,0.2)', maxHeight:'92vh', overflowY:'auto' }}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:24 }}>
           <h2 style={{ fontSize:20, fontFamily:serif, color:D }}>{editItem?'Edit Produk':'Tambah Produk'}</h2>
           <button onClick={onClose} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:'#9A8060' }}>✕</button>
         </div>
 
-        {/* Basic Info */}
-        <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:24 }}>
-          <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G, borderBottom:`1px solid rgba(193,152,60,0.15)`, paddingBottom:8 }}>Info Produk</div>
-
-          <div>
-            <label className="form-label">Nama Produk *</label>
-            <input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className="form-input" placeholder="Linen Wide Pants" />
-          </div>
-
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+        {/* ── BASIC INFO ── */}
+        <div style={{ marginBottom:24 }}>
+          <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G, borderBottom:`1px solid rgba(193,152,60,0.15)`, paddingBottom:8, marginBottom:16 }}>Info Produk</div>
+          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
             <div>
-              <label className="form-label">Harga (Rp) *</label>
-              <input type="number" value={form.price} onChange={e=>setForm(p=>({...p,price:e.target.value}))} className="form-input" placeholder="189000" />
+              <label className="form-label">Nama Produk *</label>
+              <input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} className="form-input" placeholder="Linen Wide Pants" />
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div>
+                <label className="form-label">Harga (Rp) *</label>
+                <input type="number" value={form.price} onChange={e=>setForm(p=>({...p,price:e.target.value}))} className="form-input" placeholder="189000" />
+              </div>
+              <div>
+                <label className="form-label">Stok *</label>
+                <input type="number" value={form.stock} onChange={e=>setForm(p=>({...p,stock:e.target.value}))} className="form-input" placeholder="20" />
+              </div>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+              <div>
+                <label className="form-label">Berat (gram)</label>
+                <input type="number" value={form.weight} onChange={e=>setForm(p=>({...p,weight:e.target.value}))} className="form-input" placeholder="300" />
+              </div>
+              <div>
+                <label className="form-label">Kategori</label>
+                <select value={form.category} onChange={e=>setForm(p=>({...p,category:e.target.value}))} className="form-input" style={{ cursor:'pointer' }}>
+                  {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+                </select>
+              </div>
             </div>
             <div>
-              <label className="form-label">Stok *</label>
-              <input type="number" value={form.stock} onChange={e=>setForm(p=>({...p,stock:e.target.value}))} className="form-input" placeholder="20" />
-            </div>
-          </div>
-
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-            <div>
-              <label className="form-label">Berat (gram)</label>
-              <input type="number" value={form.weight} onChange={e=>setForm(p=>({...p,weight:e.target.value}))} className="form-input" placeholder="300" />
+              <label className="form-label">Ukuran (pisahkan koma, kosongkan jika 1 ukuran)</label>
+              <input value={form.sizes} onChange={e=>setForm(p=>({...p,sizes:e.target.value}))} className="form-input" placeholder="S, M, L, XL" />
             </div>
             <div>
-              <label className="form-label">Kategori</label>
-              <select value={form.category} onChange={e=>setForm(p=>({...p,category:e.target.value}))} className="form-input" style={{ cursor:'pointer' }}>
-                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              <label className="form-label">Badge</label>
+              <select value={form.badge} onChange={e=>setForm(p=>({...p,badge:e.target.value}))} className="form-input" style={{ cursor:'pointer' }}>
+                <option value="">Tidak ada</option>
+                <option value="Best Seller">Best Seller</option>
+                <option value="New">New</option>
+                <option value="Sale">Sale</option>
               </select>
             </div>
-          </div>
-
-          <div>
-            <label className="form-label">Ukuran (pisahkan dengan koma, kosongkan jika 1 ukuran)</label>
-            <input value={form.sizes} onChange={e=>setForm(p=>({...p,sizes:e.target.value}))} className="form-input" placeholder="S, M, L, XL" />
-          </div>
-
-          <div>
-            <label className="form-label">Badge</label>
-            <select value={form.badge} onChange={e=>setForm(p=>({...p,badge:e.target.value}))} className="form-input" style={{ cursor:'pointer' }}>
-              <option value="">Tidak ada</option>
-              <option value="Best Seller">Best Seller</option>
-              <option value="New">New</option>
-              <option value="Sale">Sale</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="form-label">Deskripsi</label>
-            <textarea value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} className="form-input" rows={3} placeholder="Deskripsi produk..." style={{ resize:'vertical' }} />
-          </div>
-        </div>
-
-        {/* Main Photos */}
-        <div style={{ marginBottom:24 }}>
-          <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G, borderBottom:`1px solid rgba(193,152,60,0.15)`, paddingBottom:8, marginBottom:14 }}>
-            Foto Produk Utama
-          </div>
-
-          {/* Thumbnails */}
-          <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12 }}>
-            {images.map((url, i) => (
-              <div key={i} style={{ position:'relative', width:72, height:72 }}>
-                <img src={url} alt="" style={{ width:72, height:72, objectFit:'cover', borderRadius:4, border:'1px solid rgba(193,152,60,0.2)' }} />
-                <button onClick={() => removeImage(url)} style={{ position:'absolute', top:-6, right:-6, width:18, height:18, borderRadius:'50%', background:'#DC2626', color:'white', border:'none', cursor:'pointer', fontSize:10, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
-              </div>
-            ))}
-            <div onClick={() => mainImgRef.current?.click()} style={{ width:72, height:72, border:'2px dashed rgba(193,152,60,0.3)', borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:24, color:'rgba(193,152,60,0.5)', transition:'all 0.2s' }}
-              onMouseEnter={e=>e.currentTarget.style.borderColor=G}
-              onMouseLeave={e=>e.currentTarget.style.borderColor='rgba(193,152,60,0.3)'}>
-              {uploading ? '⏳' : '+'}
+            <div>
+              <label className="form-label">Deskripsi</label>
+              <textarea value={form.description} onChange={e=>setForm(p=>({...p,description:e.target.value}))} className="form-input" rows={3} placeholder="Deskripsi produk..." style={{ resize:'vertical' }} />
             </div>
           </div>
-          <input ref={mainImgRef} type="file" accept="image/*" multiple style={{ display:'none' }} onChange={e=>handleMainImages(e.target.files)} />
-          <p style={{ fontSize:10, color:'#9A8060' }}>Upload multiple foto — foto pertama akan jadi thumbnail utama</p>
         </div>
 
-        {/* Color Variants */}
+        {/* ── COLOR VARIANTS ── */}
         <div style={{ marginBottom:24 }}>
-          <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G, borderBottom:`1px solid rgba(193,152,60,0.15)`, paddingBottom:8, marginBottom:14 }}>
-            Varian Warna
-          </div>
+          <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G, borderBottom:`1px solid rgba(193,152,60,0.15)`, paddingBottom:8, marginBottom:16 }}>Varian Warna</div>
 
           {/* Add color */}
-          <div style={{ display:'flex', gap:8, marginBottom:12, flexWrap:'wrap' }}>
-            <input value={newColor.name} onChange={e=>setNewColor(p=>({...p,name:e.target.value}))} className="form-input" placeholder="Nama warna (e.g. Cream)" style={{ flex:1, minWidth:120 }}
+          <div style={{ display:'flex', gap:8, marginBottom:10, flexWrap:'wrap' }}>
+            <input value={newColor.name} onChange={e=>setNewColor(p=>({...p,name:e.target.value}))}
+              className="form-input" placeholder="Nama warna (e.g. Cream)" style={{ flex:1, minWidth:120 }}
               onKeyDown={e=>e.key==='Enter'&&addColor()} />
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
               <label style={{ fontSize:10, color:'#9A8060' }}>Hex:</label>
-              <input type="color" value={newColor.hex} onChange={e=>setNewColor(p=>({...p,hex:e.target.value}))} style={{ width:36, height:36, border:'1px solid rgba(193,152,60,0.2)', borderRadius:4, cursor:'pointer', padding:2 }} />
+              <input type="color" value={newColor.hex} onChange={e=>setNewColor(p=>({...p,hex:e.target.value}))}
+                style={{ width:36, height:36, border:'1px solid rgba(193,152,60,0.2)', borderRadius:4, cursor:'pointer', padding:2 }} />
             </div>
-            <button onClick={addColor} style={{ padding:'8px 16px', background:D, color:C, border:'none', borderRadius:4, fontSize:11, cursor:'pointer', fontFamily:sans, whiteSpace:'nowrap' }}>+ Tambah</button>
+            <button onClick={addColor} style={{ padding:'8px 16px', background:D, color:C, border:'none', borderRadius:4, fontSize:11, cursor:'pointer', fontFamily:sans }}>+ Tambah</button>
           </div>
 
           {/* Preset colors */}
           <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:12 }}>
             {PRESET_COLORS.map(pc => (
               <button key={pc.name} onClick={() => setNewColor(pc)}
-                style={{ display:'flex', alignItems:'center', gap:4, padding:'4px 10px', border:`1px solid rgba(193,152,60,0.2)`, borderRadius:20, background:'transparent', cursor:'pointer', fontSize:10, fontFamily:sans }}>
+                style={{ display:'flex', alignItems:'center', gap:4, padding:'4px 10px', border:'1px solid rgba(193,152,60,0.2)', borderRadius:20, background:'transparent', cursor:'pointer', fontSize:10, fontFamily:sans }}>
                 <div style={{ width:10, height:10, borderRadius:'50%', background:pc.hex, border:'1px solid rgba(0,0,0,0.1)' }} />
                 {pc.name}
               </button>
@@ -301,42 +338,51 @@ function ProductForm({ editItem, onSave, onClose }) {
           </div>
 
           {/* Color list */}
-          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-            {colorImages.map(c => (
-              <div key={c.name} style={{ display:'flex', alignItems:'center', gap:10, background:LB, borderRadius:4, padding:'10px 12px', border:'1px solid rgba(193,152,60,0.1)' }}>
-                <div style={{ width:20, height:20, borderRadius:'50%', background:c.hex, border:'1px solid rgba(0,0,0,0.1)', flexShrink:0 }} />
-                <span style={{ fontSize:12, color:D, flex:1 }}>{c.name}</span>
-
-                {/* Color photo */}
-                {c.image_url ? (
-                  <div style={{ position:'relative' }}>
-                    <img src={c.image_url} alt={c.name} style={{ width:48, height:48, objectFit:'cover', borderRadius:4 }} />
-                    <button onClick={() => setColorImages(prev => prev.map(x => x.name===c.name ? {...x,image_url:null} : x))}
-                      style={{ position:'absolute', top:-4, right:-4, width:14, height:14, borderRadius:'50%', background:'#DC2626', color:'white', border:'none', cursor:'pointer', fontSize:8, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
-                  </div>
-                ) : (
-                  <div onClick={() => colorImgRefs.current[c.name]?.click()}
-                    style={{ width:48, height:48, border:'2px dashed rgba(193,152,60,0.3)', borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', fontSize:16, color:'rgba(193,152,60,0.5)' }}>
-                    📷
-                  </div>
-                )}
-                <input ref={el => colorImgRefs.current[c.name] = el} type="file" accept="image/*" style={{ display:'none' }} onChange={e=>e.target.files[0]&&handleColorImage(e.target.files[0],c.name)} />
-
-                <button onClick={() => removeColor(c.name)} style={{ background:'none', border:'none', cursor:'pointer', color:'#DC2626', fontSize:14, flexShrink:0 }}>🗑️</button>
-              </div>
-            ))}
-            {colorImages.length === 0 && (
-              <p style={{ fontSize:11, color:'#9A8060', fontStyle:'italic' }}>Belum ada varian warna. Tambah warna di atas.</p>
-            )}
-          </div>
+          {colorImages.length > 0 && (
+            <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:12 }}>
+              {colorImages.map(c => (
+                <div key={c.name} style={{ display:'flex', alignItems:'center', gap:10, background:LB, borderRadius:4, padding:'8px 12px', border:'1px solid rgba(193,152,60,0.1)' }}>
+                  <div style={{ width:18, height:18, borderRadius:'50%', background:c.hex, border:'1px solid rgba(0,0,0,0.1)', flexShrink:0 }} />
+                  <span style={{ fontSize:12, color:D, flex:1 }}>{c.name}</span>
+                  {c.image_url
+                    ? <img src={c.image_url} alt={c.name} style={{ width:40, height:40, objectFit:'cover', borderRadius:4, border:`1px solid ${G}` }} />
+                    : <span style={{ fontSize:10, color:'#9A8060', fontStyle:'italic' }}>Belum ada foto</span>
+                  }
+                  <button onClick={() => removeColor(c.name)} style={{ background:'none', border:'none', cursor:'pointer', color:'#DC2626', fontSize:14 }}>🗑️</button>
+                </div>
+              ))}
+            </div>
+          )}
+          {colorImages.length === 0 && <p style={{ fontSize:11, color:'#9A8060', fontStyle:'italic', marginBottom:12 }}>Belum ada varian warna.</p>}
         </div>
+
+        {/* ── FOLDER BROWSER ── */}
+        <div style={{ marginBottom:24 }}>
+          <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G, borderBottom:`1px solid rgba(193,152,60,0.15)`, paddingBottom:8, marginBottom:16 }}>
+            Foto Produk — Browse dari Folder
+          </div>
+          <FolderBrowser
+            onSelectImages={setSelectedMainImages}
+            onSelectColorImage={handleColorImage}
+            colorImages={colorImages}
+            selectedMainImages={selectedMainImages}
+          />
+        </div>
+
+        {/* Selected summary */}
+        {selectedMainImages.length > 0 && (
+          <div style={{ background:LB, borderRadius:4, padding:'10px 14px', marginBottom:20, fontSize:12, color:D }}>
+            ✅ {selectedMainImages.length} foto utama dipilih ·
+            {colorImages.filter(c=>c.image_url).length} warna sudah ada foto
+          </div>
+        )}
 
         {/* Save */}
         <div style={{ display:'flex', gap:12 }}>
           <button onClick={onClose} style={{ flex:1, padding:'12px', border:'1px solid rgba(193,152,60,0.3)', borderRadius:4, background:'transparent', color:D, fontSize:11, letterSpacing:'0.15em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans }}>Batal</button>
-          <button onClick={handleSave} disabled={saving||uploading}
+          <button onClick={handleSave} disabled={saving}
             style={{ flex:2, padding:'12px', background:`linear-gradient(135deg,${G},#D4AA50)`, color:C, border:'none', borderRadius:4, fontSize:11, letterSpacing:'0.15em', textTransform:'uppercase', cursor:saving?'not-allowed':'pointer', fontFamily:sans, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-            {saving ? <><div style={{ width:14, height:14, border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid white', borderRadius:'50%', animation:'spin 1s linear infinite' }} />Menyimpan...</> : editItem?'Update Produk':'Simpan Produk'}
+            {saving?<><div style={{ width:14, height:14, border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid white', borderRadius:'50%', animation:'spin 1s linear infinite' }} />Menyimpan...</>:editItem?'Update Produk':'Simpan Produk'}
           </button>
         </div>
       </div>
@@ -348,14 +394,14 @@ function ProductForm({ editItem, onSave, onClose }) {
 function OrdersTab({ orders, onStatusChange }) {
   const [selected, setSelected] = useState(null)
   const [filter, setFilter] = useState('all')
-  const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter)
+  const filtered = filter==='all' ? orders : orders.filter(o=>o.status===filter)
 
   return (
     <div>
       <div style={{ display:'flex', gap:8, marginBottom:20, flexWrap:'wrap' }}>
         {[['all','Semua'],['baru','Baru'],['diproses','Diproses'],['dikirim','Dikirim'],['selesai','Selesai']].map(([val,lbl]) => (
-          <button key={val} onClick={() => setFilter(val)}
-            style={{ padding:'6px 16px', borderRadius:20, border:`1px solid`, borderColor: filter===val ? D : 'rgba(193,152,60,0.2)', background: filter===val ? D : 'transparent', color: filter===val ? C : D, fontSize:11, cursor:'pointer', fontFamily:sans }}>
+          <button key={val} onClick={()=>setFilter(val)}
+            style={{ padding:'6px 16px', borderRadius:20, border:'1px solid', borderColor:filter===val?D:'rgba(193,152,60,0.2)', background:filter===val?D:'transparent', color:filter===val?C:D, fontSize:11, cursor:'pointer', fontFamily:sans }}>
             {lbl} {val==='all'?`(${orders.length})`:val==='baru'?`(${orders.filter(o=>o.status==='baru').length})`:''}
           </button>
         ))}
@@ -369,10 +415,10 @@ function OrdersTab({ orders, onStatusChange }) {
                 <div style={{ fontSize:10, color:G, letterSpacing:'0.2em', textTransform:'uppercase', marginBottom:4 }}>Detail Order</div>
                 <h2 style={{ fontSize:20, fontFamily:serif, color:D }}>{selected.order_code}</h2>
               </div>
-              <button onClick={() => setSelected(null)} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:'#9A8060' }}>✕</button>
+              <button onClick={()=>setSelected(null)} style={{ background:'none', border:'none', fontSize:20, cursor:'pointer', color:'#9A8060' }}>✕</button>
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:20 }}>
-              {[['Customer',selected.customer_name],['HP/WA',selected.customer_phone],['Kota',selected.customer_city],['Provinsi',selected.customer_province],['Zona',ZONES_LABEL[selected.zone]||selected.zone],['Total',`Rp ${(selected.total||0).toLocaleString('id-ID')}`]].map(([lbl,val]) => (
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+              {[['Customer',selected.customer_name],['HP/WA',selected.customer_phone],['Kota',selected.customer_city],['Provinsi',selected.customer_province],['Zona',ZONES_LABEL[selected.zone]||selected.zone],['Total',`Rp ${(selected.total||0).toLocaleString('id-ID')}`]].map(([lbl,val])=>(
                 <div key={lbl} style={{ background:LB, borderRadius:6, padding:'10px 14px' }}>
                   <div style={{ fontSize:9, color:'#9A8060', letterSpacing:'0.15em', textTransform:'uppercase', marginBottom:3 }}>{lbl}</div>
                   <div style={{ fontSize:13, color:D, fontWeight:600 }}>{val}</div>
@@ -385,7 +431,7 @@ function OrdersTab({ orders, onStatusChange }) {
             </div>
             <div style={{ marginBottom:16 }}>
               <div style={{ fontSize:9, color:'#9A8060', letterSpacing:'0.15em', textTransform:'uppercase', marginBottom:10 }}>Produk Dipesan</div>
-              {(selected.items||[]).map((item,i) => (
+              {(selected.items||[]).map((item,i)=>(
                 <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid rgba(193,152,60,0.08)' }}>
                   <div>
                     <div style={{ fontSize:12, color:D, fontWeight:500 }}>{item.name}</div>
@@ -405,9 +451,9 @@ function OrdersTab({ orders, onStatusChange }) {
             <div style={{ marginBottom:16 }}>
               <div style={{ fontSize:9, color:'#9A8060', letterSpacing:'0.15em', textTransform:'uppercase', marginBottom:8 }}>Update Status</div>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                {Object.entries(STATUS).map(([key,val]) => (
-                  <button key={key} onClick={() => { onStatusChange(selected.id, key); setSelected({...selected, status:key}) }}
-                    style={{ padding:'6px 14px', borderRadius:20, border: selected.status===key?`2px solid ${G}`:'1px solid rgba(193,152,60,0.2)', background: selected.status===key?'rgba(193,152,60,0.1)':'transparent', color:D, fontSize:11, cursor:'pointer', fontFamily:sans }}>
+                {Object.entries(STATUS).map(([key,val])=>(
+                  <button key={key} onClick={()=>{onStatusChange(selected.id,key);setSelected({...selected,status:key})}}
+                    style={{ padding:'6px 14px', borderRadius:20, border:selected.status===key?`2px solid ${G}`:'1px solid rgba(193,152,60,0.2)', background:selected.status===key?'rgba(193,152,60,0.1)':'transparent', color:D, fontSize:11, cursor:'pointer', fontFamily:sans }}>
                     {val.label}
                   </button>
                 ))}
@@ -426,15 +472,15 @@ function OrdersTab({ orders, onStatusChange }) {
           <table style={{ width:'100%', borderCollapse:'collapse' }}>
             <thead>
               <tr style={{ background:LB }}>
-                {['Order ID','Customer','Zona','Total','Status','Tanggal','Aksi'].map(h => (
+                {['Order ID','Customer','Zona','Total','Status','Tanggal','Aksi'].map(h=>(
                   <th key={h} style={{ padding:'12px 16px', textAlign:'left', fontSize:9, letterSpacing:'0.2em', textTransform:'uppercase', color:'#9A8060', fontWeight:400, whiteSpace:'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {filtered.length===0 ? (
                 <tr><td colSpan={7} style={{ padding:'48px', textAlign:'center', color:'#9A8060', fontSize:13, fontStyle:'italic' }}>Belum ada order</td></tr>
-              ) : filtered.map(order => (
+              ) : filtered.map(order=>(
                 <tr key={order.id} style={{ borderBottom:'1px solid rgba(193,152,60,0.07)', transition:'background 0.2s' }}
                   onMouseEnter={e=>e.currentTarget.style.background='#FDFAF4'}
                   onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
@@ -448,12 +494,12 @@ function OrdersTab({ orders, onStatusChange }) {
                   <td style={{ padding:'12px 16px' }}>
                     <select value={order.status||'baru'} onChange={e=>onStatusChange(order.id,e.target.value)}
                       style={{ background:STATUS[order.status||'baru']?.bg, color:STATUS[order.status||'baru']?.color, border:'none', padding:'4px 8px', borderRadius:20, fontSize:10, cursor:'pointer', fontFamily:sans }}>
-                      {Object.entries(STATUS).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
+                      {Object.entries(STATUS).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}
                     </select>
                   </td>
                   <td style={{ padding:'12px 16px', fontSize:11, color:'#9A8060', whiteSpace:'nowrap' }}>{new Date(order.created_at).toLocaleDateString('id-ID')}</td>
                   <td style={{ padding:'12px 16px' }}>
-                    <button onClick={() => setSelected(order)} style={{ fontSize:10, color:G, background:'none', border:'none', cursor:'pointer', borderBottom:`1px solid ${G}`, fontFamily:sans }}>Detail</button>
+                    <button onClick={()=>setSelected(order)} style={{ fontSize:10, color:G, background:'none', border:'none', cursor:'pointer', borderBottom:`1px solid ${G}`, fontFamily:sans }}>Detail</button>
                   </td>
                 </tr>
               ))}
@@ -492,9 +538,9 @@ export default function Admin() {
   async function loadData() {
     setLoading(true)
     try {
-      const [o, p] = await Promise.all([getAllOrders(), getAllProducts()])
-      setOrders(o || []); setProducts(p || [])
-    } catch { showToast('Gagal memuat data', 'error') }
+      const [o,p] = await Promise.all([getAllOrders(), getAllProducts()])
+      setOrders(o||[]); setProducts(p||[])
+    } catch { showToast('Gagal memuat data','error') }
     finally { setLoading(false) }
   }
 
@@ -504,26 +550,26 @@ export default function Admin() {
   }
 
   async function handleStatusChange(id, status) {
-    try { await updateOrderStatus(id, status); setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o)); showToast(`Status diupdate ke ${STATUS[status]?.label}`) }
-    catch { showToast('Gagal update status', 'error') }
+    try { await updateOrderStatus(id,status); setOrders(prev=>prev.map(o=>o.id===id?{...o,status}:o)); showToast(`Status diupdate ke ${STATUS[status]?.label}`) }
+    catch { showToast('Gagal update status','error') }
   }
 
   async function handleSaveProduct(data) {
     if (editItem) {
       const p = await updateProduct(editItem.id, data)
-      setProducts(prev => prev.map(x => x.id === editItem.id ? p : x))
+      setProducts(prev=>prev.map(x=>x.id===editItem.id?p:x))
       showToast('Produk diupdate!')
     } else {
       const p = await createProduct(data)
-      setProducts(prev => [...prev, p])
+      setProducts(prev=>[...prev,p])
       showToast('Produk ditambahkan!')
     }
   }
 
   async function handleDeleteProduct(id) {
     if (!window.confirm('Hapus produk ini?')) return
-    try { await deleteProduct(id); setProducts(prev => prev.filter(p => p.id !== id)); showToast('Produk dihapus!') }
-    catch { showToast('Gagal hapus produk', 'error') }
+    try { await deleteProduct(id); setProducts(prev=>prev.filter(p=>p.id!==id)); showToast('Produk dihapus!') }
+    catch { showToast('Gagal hapus produk','error') }
   }
 
   if (checkingSession) return (
@@ -532,27 +578,23 @@ export default function Admin() {
     </div>
   )
 
-  if (!loggedIn) return <LoginScreen onLogin={() => setLoggedIn(true)} />
+  if (!loggedIn) return <LoginScreen onLogin={()=>setLoggedIn(true)} />
 
-  const tabs = [{ id:'dashboard', icon:'📊', label:'Dashboard' }, { id:'orders', icon:'📦', label:'Orders' }, { id:'products', icon:'🧥', label:'Produk' }]
-  const newOrders = orders.filter(o => o.status === 'baru').length
-  const totalRevenue = orders.filter(o => o.status === 'selesai').reduce((s, o) => s + (o.total||0), 0)
+  const tabs = [{ id:'dashboard', icon:'📊', label:'Dashboard' },{ id:'orders', icon:'📦', label:'Orders' },{ id:'products', icon:'🧥', label:'Produk' }]
+  const newOrders = orders.filter(o=>o.status==='baru').length
+  const totalRevenue = orders.filter(o=>o.status==='selesai').reduce((s,o)=>s+(o.total||0),0)
 
   return (
     <div style={{ minHeight:'100vh', background:LB, fontFamily:sans, display:'flex' }}>
-      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)} />}
 
       {showForm && (
-        <ProductForm
-          editItem={editItem}
-          onSave={handleSaveProduct}
-          onClose={() => { setShowForm(false); setEditItem(null) }}
-        />
+        <ProductForm editItem={editItem} onSave={handleSaveProduct} onClose={()=>{setShowForm(false);setEditItem(null)}} />
       )}
 
       {/* SIDEBAR */}
       <div className="admin-sidebar" style={{ width:220, background:D, position:'fixed', top:0, left:0, height:'100vh', display:'flex', flexDirection:'column', zIndex:50 }}>
-        <style>{`@media(max-width:768px){.admin-sidebar{display:none !important} .admin-main{margin-left:0 !important} .admin-mobile-tabs{display:flex !important}}`}</style>
+        <style>{`@media(max-width:768px){.admin-sidebar{display:none !important}.admin-main{margin-left:0 !important}.admin-mobile-tabs{display:flex !important}}`}</style>
         <div style={{ padding:'28px 24px 20px', borderBottom:'1px solid rgba(193,152,60,0.15)' }}>
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <img src="/logo.png" alt="h" style={{ width:32, height:32, objectFit:'contain' }} />
@@ -563,11 +605,11 @@ export default function Admin() {
           </div>
         </div>
         <nav style={{ flex:1, padding:'16px 12px' }}>
-          {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              style={{ width:'100%', display:'flex', alignItems:'center', gap:12, padding:'11px 16px', borderRadius:6, border:'none', cursor:'pointer', marginBottom:4, background: activeTab===tab.id?'rgba(193,152,60,0.15)':'transparent', color: activeTab===tab.id?G:'rgba(253,251,247,0.55)', fontSize:12, fontFamily:sans, textAlign:'left', transition:'all 0.2s' }}>
+          {tabs.map(tab=>(
+            <button key={tab.id} onClick={()=>setActiveTab(tab.id)}
+              style={{ width:'100%', display:'flex', alignItems:'center', gap:12, padding:'11px 16px', borderRadius:6, border:'none', cursor:'pointer', marginBottom:4, background:activeTab===tab.id?'rgba(193,152,60,0.15)':'transparent', color:activeTab===tab.id?G:'rgba(253,251,247,0.55)', fontSize:12, fontFamily:sans, textAlign:'left', transition:'all 0.2s' }}>
               {tab.icon} {tab.label}
-              {tab.id==='orders' && newOrders > 0 && <span style={{ marginLeft:'auto', background:G, color:C, borderRadius:'50%', width:18, height:18, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700 }}>{newOrders}</span>}
+              {tab.id==='orders'&&newOrders>0&&<span style={{ marginLeft:'auto', background:G, color:C, borderRadius:'50%', width:18, height:18, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700 }}>{newOrders}</span>}
             </button>
           ))}
         </nav>
@@ -579,9 +621,9 @@ export default function Admin() {
       {/* MAIN */}
       <div className="admin-main" style={{ marginLeft:220, flex:1, padding:'32px' }}>
         <div className="admin-mobile-tabs" style={{ display:'none', gap:8, marginBottom:20, overflowX:'auto', paddingBottom:8 }}>
-          {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              style={{ padding:'8px 16px', borderRadius:20, border:'none', cursor:'pointer', background: activeTab===tab.id?D:'#E8DFD0', color: activeTab===tab.id?C:D, fontSize:11, fontFamily:sans, whiteSpace:'nowrap', flexShrink:0 }}>
+          {tabs.map(tab=>(
+            <button key={tab.id} onClick={()=>setActiveTab(tab.id)}
+              style={{ padding:'8px 16px', borderRadius:20, border:'none', cursor:'pointer', background:activeTab===tab.id?D:'#E8DFD0', color:activeTab===tab.id?C:D, fontSize:11, fontFamily:sans, whiteSpace:'nowrap', flexShrink:0 }}>
               {tab.icon} {tab.label}
             </button>
           ))}
@@ -595,7 +637,7 @@ export default function Admin() {
           </div>
         ) : (
           <>
-            {activeTab === 'dashboard' && (
+            {activeTab==='dashboard' && (
               <div>
                 <div style={{ marginBottom:28 }}>
                   <div style={{ fontSize:10, letterSpacing:'0.3em', textTransform:'uppercase', color:G, marginBottom:6 }}>Overview</div>
@@ -610,14 +652,14 @@ export default function Admin() {
                 <div style={{ background:C, borderRadius:8, border:'1px solid rgba(193,152,60,0.12)', overflow:'hidden' }}>
                   <div style={{ padding:'16px 20px', borderBottom:'1px solid rgba(193,152,60,0.1)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                     <h2 style={{ fontSize:16, fontWeight:400, fontFamily:serif, color:D }}>Order Terbaru</h2>
-                    <button onClick={() => setActiveTab('orders')} style={{ fontSize:10, color:G, background:'none', border:'none', cursor:'pointer', borderBottom:`1px solid ${G}`, fontFamily:sans }}>Lihat Semua →</button>
+                    <button onClick={()=>setActiveTab('orders')} style={{ fontSize:10, color:G, background:'none', border:'none', cursor:'pointer', borderBottom:`1px solid ${G}`, fontFamily:sans }}>Lihat Semua →</button>
                   </div>
                   <div style={{ overflowX:'auto' }}>
                     <table style={{ width:'100%', borderCollapse:'collapse' }}>
-                      <thead><tr style={{ background:LB }}>{['Order ID','Customer','Total','Status'].map(h => <th key={h} style={{ padding:'10px 16px', textAlign:'left', fontSize:9, letterSpacing:'0.2em', textTransform:'uppercase', color:'#9A8060', fontWeight:400 }}>{h}</th>)}</tr></thead>
+                      <thead><tr style={{ background:LB }}>{['Order ID','Customer','Total','Status'].map(h=><th key={h} style={{ padding:'10px 16px', textAlign:'left', fontSize:9, letterSpacing:'0.2em', textTransform:'uppercase', color:'#9A8060', fontWeight:400 }}>{h}</th>)}</tr></thead>
                       <tbody>
-                        {orders.length === 0 ? <tr><td colSpan={4} style={{ padding:'32px', textAlign:'center', color:'#9A8060', fontSize:12, fontStyle:'italic' }}>Belum ada order</td></tr>
-                        : orders.slice(0,5).map(o => (
+                        {orders.length===0 ? <tr><td colSpan={4} style={{ padding:'32px', textAlign:'center', color:'#9A8060', fontSize:12, fontStyle:'italic' }}>Belum ada order</td></tr>
+                        : orders.slice(0,5).map(o=>(
                           <tr key={o.id} style={{ borderBottom:'1px solid rgba(193,152,60,0.07)' }}>
                             <td style={{ padding:'12px 16px', fontSize:12, color:G, fontWeight:700 }}>{o.order_code}</td>
                             <td style={{ padding:'12px 16px', fontSize:12, color:D }}>{o.customer_name}</td>
@@ -632,7 +674,7 @@ export default function Admin() {
               </div>
             )}
 
-            {activeTab === 'orders' && (
+            {activeTab==='orders' && (
               <div>
                 <div style={{ marginBottom:28 }}>
                   <div style={{ fontSize:10, letterSpacing:'0.3em', textTransform:'uppercase', color:G, marginBottom:6 }}>Management</div>
@@ -642,44 +684,39 @@ export default function Admin() {
               </div>
             )}
 
-            {activeTab === 'products' && (
+            {activeTab==='products' && (
               <div>
                 <div style={{ marginBottom:28, display:'flex', justifyContent:'space-between', alignItems:'flex-end', flexWrap:'wrap', gap:16 }}>
                   <div>
                     <div style={{ fontSize:10, letterSpacing:'0.3em', textTransform:'uppercase', color:G, marginBottom:6 }}>Management</div>
                     <h1 style={{ fontSize:28, fontWeight:400, fontFamily:serif, color:D }}>Kelola Produk</h1>
                   </div>
-                  <button onClick={() => { setEditItem(null); setShowForm(true) }}
+                  <button onClick={()=>{setEditItem(null);setShowForm(true)}}
                     style={{ padding:'12px 24px', background:`linear-gradient(135deg,${G},#D4AA50,${G})`, color:C, border:'none', borderRadius:4, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans, boxShadow:'0 4px 16px rgba(193,152,60,0.3)' }}>
                     + Tambah Produk
                   </button>
                 </div>
-
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:16 }}>
-                  {products.length === 0 ? (
+                  {products.length===0 ? (
                     <div style={{ gridColumn:'1/-1', textAlign:'center', padding:'64px', color:'#9A8060' }}>
                       <div style={{ fontSize:48, marginBottom:16 }}>📦</div>
                       <p style={{ fontFamily:serif, fontStyle:'italic' }}>Belum ada produk. Tambah produk pertama kamu!</p>
                     </div>
-                  ) : products.map(p => (
+                  ) : products.map(p=>(
                     <div key={p.id} style={{ background:C, borderRadius:8, border:'1px solid rgba(193,152,60,0.12)', overflow:'hidden', transition:'box-shadow 0.2s' }}
                       onMouseEnter={e=>e.currentTarget.style.boxShadow='0 8px 32px rgba(193,152,60,0.1)'}
                       onMouseLeave={e=>e.currentTarget.style.boxShadow='none'}>
-                      <div style={{ height:140, background: p.images?.[0] ? 'none' : (p.bg||'linear-gradient(145deg,#F0E4C8,#E8D5A8)'), display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
-                        {p.images?.[0]
-                          ? <img src={p.images[0]} alt={p.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                          : <span style={{ fontSize:40 }}>👗</span>
-                        }
-                        {p.badge && <span style={{ position:'absolute', top:8, left:8, background:`linear-gradient(135deg,${G},#D4AA50)`, color:C, fontSize:8, padding:'2px 8px', letterSpacing:'0.15em', textTransform:'uppercase', fontFamily:sans }}>{p.badge}</span>}
+                      <div style={{ height:140, background:p.images?.[0]?'none':(p.bg||'linear-gradient(145deg,#F0E4C8,#E8D5A8)'), display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden' }}>
+                        {p.images?.[0] ? <img src={p.images[0]} alt={p.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <span style={{ fontSize:40 }}>👗</span>}
+                        {p.badge&&<span style={{ position:'absolute', top:8, left:8, background:`linear-gradient(135deg,${G},#D4AA50)`, color:C, fontSize:8, padding:'2px 8px', letterSpacing:'0.15em', textTransform:'uppercase', fontFamily:sans }}>{p.badge}</span>}
                         <span style={{ position:'absolute', top:8, right:8, background:'rgba(253,251,247,0.9)', color:D, fontSize:9, padding:'2px 8px', borderRadius:20, fontFamily:sans }}>{p.category}</span>
                       </div>
                       <div style={{ padding:'14px' }}>
                         <div style={{ fontSize:14, fontWeight:500, fontFamily:serif, color:D, marginBottom:2 }}>{p.name}</div>
                         <div style={{ fontSize:15, fontWeight:600, color:D, marginBottom:4 }}>Rp {(p.price||0).toLocaleString('id-ID')}</div>
-                        {/* Color dots */}
-                        {p.color_images?.length > 0 && (
+                        {p.color_images?.length>0&&(
                           <div style={{ display:'flex', gap:4, marginBottom:8 }}>
-                            {p.color_images.map(c => <div key={c.name} title={c.name} style={{ width:12, height:12, borderRadius:'50%', background:c.hex, border:'1px solid rgba(0,0,0,0.1)' }} />)}
+                            {p.color_images.map(c=><div key={c.name} title={c.name} style={{ width:12, height:12, borderRadius:'50%', background:c.hex, border:'1px solid rgba(0,0,0,0.1)' }} />)}
                           </div>
                         )}
                         <div style={{ display:'flex', gap:12, fontSize:10, color:'#9A8060', marginBottom:12 }}>
@@ -688,8 +725,8 @@ export default function Admin() {
                           <span>🖼️ {p.images?.length||0} foto</span>
                         </div>
                         <div style={{ display:'flex', gap:8 }}>
-                          <button onClick={() => { setEditItem(p); setShowForm(true) }} style={{ flex:1, padding:'7px', border:'1px solid rgba(193,152,60,0.3)', borderRadius:4, background:'transparent', color:D, fontSize:10, letterSpacing:'0.1em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans }}>✏️ Edit</button>
-                          <button onClick={() => handleDeleteProduct(p.id)} style={{ padding:'7px 10px', border:'1px solid #FCA5A5', borderRadius:4, background:'transparent', color:'#DC2626', fontSize:10, cursor:'pointer', fontFamily:sans }}>🗑️</button>
+                          <button onClick={()=>{setEditItem(p);setShowForm(true)}} style={{ flex:1, padding:'7px', border:'1px solid rgba(193,152,60,0.3)', borderRadius:4, background:'transparent', color:D, fontSize:10, letterSpacing:'0.1em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans }}>✏️ Edit</button>
+                          <button onClick={()=>handleDeleteProduct(p.id)} style={{ padding:'7px 10px', border:'1px solid #FCA5A5', borderRadius:4, background:'transparent', color:'#DC2626', fontSize:10, cursor:'pointer', fontFamily:sans }}>🗑️</button>
                         </div>
                       </div>
                     </div>
