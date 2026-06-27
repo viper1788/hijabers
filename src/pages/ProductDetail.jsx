@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { getProductBySlug } from '../lib/api.js'
 import { getBySlug, getRelated as getRelatedLocal } from '../data/products.js'
@@ -18,7 +18,7 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true)
   const [selectedColor, setSelectedColor] = useState(null)
   const [selectedSize, setSelectedSize] = useState(null)
-  const [activeImage, setActiveImage] = useState(0)
+  const [activeIndex, setActiveIndex] = useState(0)
   const [qty, setQty] = useState(1)
   const [toast, setToast] = useState(false)
   const [error, setError] = useState(null)
@@ -32,20 +32,16 @@ export default function ProductDetail() {
       const p = data || getBySlug(slug)
       if (!p) { setError('Produk tidak ditemukan'); setLoading(false); return }
       setProduct(p)
-      // Set default color
       const firstColor = p.color_images?.[0]?.name || (Array.isArray(p.colors) ? p.colors[0] : null)
       setSelectedColor(firstColor)
-      // Set default size
       const sizes = Array.isArray(p.sizes) ? p.sizes : []
       setSelectedSize(sizes[0] || null)
-      // Load related
+      setActiveIndex(0)
       try {
         const { getAllProducts } = await import('../lib/api.js')
         const all = await getAllProducts()
-        setRelated((all || []).filter(x => x.category === p.category && x.id !== p.id).slice(0,3))
-      } catch {
-        setRelated(getRelatedLocal(p))
-      }
+        setRelated((all||[]).filter(x => x.category===p.category && x.id!==p.id).slice(0,3))
+      } catch { setRelated(getRelatedLocal(p)) }
     } catch {
       const p = getBySlug(slug)
       if (p) {
@@ -57,57 +53,73 @@ export default function ProductDetail() {
     } finally { setLoading(false) }
   }
 
-  function handleAddToCart() {
-    if (!selectedColor && (product?.color_images?.length > 0 || (product?.colors||[]).length > 0)) return
-    addToCart(product, selectedColor || 'Default', selectedSize || 'One Size', qty)
-    setToast(true)
-    setTimeout(() => setToast(false), 2500)
-  }
-
-  function handleBuyNow() {
-    handleAddToCart()
-    navigate('/cart')
-  }
-
-  // Get all displayable images
+  // Build full image list
   function getAllImages() {
     if (!product) return []
-    const imgs = []
-    // Main images
-    if (product.images?.length > 0) imgs.push(...product.images)
-    // Color images
+    const imgs = [...(product.images||[])]
+    // Add color images that aren't already in main images
     if (product.color_images?.length > 0) {
-      product.color_images.forEach(c => { if (c.image_url) imgs.push(c.image_url) })
+      product.color_images.forEach(c => {
+        if (c.image_url && !imgs.includes(c.image_url)) imgs.push(c.image_url)
+      })
     }
-    return imgs.length > 0 ? imgs : null
+    return imgs
   }
 
-  // Get image for selected color
-  function getColorImage() {
-    if (!product || !selectedColor) return null
-    const colorObj = product.color_images?.find(c => c.name === selectedColor)
-    return colorObj?.image_url || null
+  const allImages = getAllImages()
+
+  // When color selected, jump to that color's image
+  function selectColor(name) {
+    setSelectedColor(name)
+    const colorObj = product?.color_images?.find(c => c.name === name)
+    if (colorObj?.image_url) {
+      const idx = allImages.indexOf(colorObj.image_url)
+      if (idx !== -1) setActiveIndex(idx)
+    }
   }
 
-  // Get hex for color name
+  const prevImage = useCallback(() => {
+    setActiveIndex(i => i === 0 ? allImages.length - 1 : i - 1)
+  }, [allImages.length])
+
+  const nextImage = useCallback(() => {
+    setActiveIndex(i => i === allImages.length - 1 ? 0 : i + 1)
+  }, [allImages.length])
+
+  // Keyboard navigation
+  useEffect(() => {
+    const fn = e => {
+      if (e.key === 'ArrowLeft') prevImage()
+      if (e.key === 'ArrowRight') nextImage()
+    }
+    window.addEventListener('keydown', fn)
+    return () => window.removeEventListener('keydown', fn)
+  }, [prevImage, nextImage])
+
   function getColorHex(name) {
-    if (!product) return '#ccc'
-    const colorObj = product.color_images?.find(c => c.name === name)
+    const colorObj = product?.color_images?.find(c => c.name === name)
     if (colorObj?.hex) return colorObj.hex
     const map = { "Cream":"#F5ECD7","Sage Green":"#A8B59C","Dusty Rose":"#E8C5C8","Warm Brown":"#C9A882","Off White":"#F0EDE8","Classic Black":"#2B2B2B","Navy":"#1B2A4A","Mocha":"#8B6B4A" }
     return map[name] || '#ccc'
   }
 
-  // All images including selected color
-  const allImages = getAllImages()
-  const colorImage = getColorImage()
-  const displayImage = colorImage || (allImages?.[activeImage]) || null
+  function handleAddToCart() {
+    addToCart(product, selectedColor||'Default', selectedSize||'One Size', qty)
+    setToast(true)
+    setTimeout(() => setToast(false), 2500)
+  }
+
+  function handleBuyNow() {
+    addToCart(product, selectedColor||'Default', selectedSize||'One Size', qty)
+    navigate('/cart')
+  }
 
   const colorList = product?.color_images?.length > 0
     ? product.color_images.map(c => c.name)
     : (Array.isArray(product?.colors) ? product.colors : [])
 
   const sizeList = Array.isArray(product?.sizes) ? product.sizes : []
+  const currentImage = allImages[activeIndex] || null
 
   if (loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'80vh', flexDirection:'column', gap:16 }}>
@@ -129,14 +141,14 @@ export default function ProductDetail() {
 
       {/* Toast */}
       {toast && (
-        <div style={{ position:'fixed', top:88, right:24, zIndex:999, background:D, color:C, padding:'12px 20px', borderRadius:8, fontSize:12, boxShadow:'0 8px 32px rgba(0,0,0,0.15)', display:'flex', alignItems:'center', gap:8 }}>
+        <div style={{ position:'fixed', top:88, right:24, zIndex:999, background:D, color:C, padding:'12px 20px', borderRadius:8, fontSize:12, boxShadow:'0 8px 32px rgba(0,0,0,0.15)', display:'flex', alignItems:'center', gap:8, animation:'fadeUp 0.3s ease' }}>
           ✅ Ditambahkan ke keranjang!
         </div>
       )}
 
       {/* BREADCRUMB */}
       <div style={{ padding:'14px 48px', borderBottom:`1px solid rgba(193,152,60,0.08)`, display:'flex', gap:8, alignItems:'center', fontSize:11, color:'#9A8060', flexWrap:'wrap' }}>
-        <style>{`@media(max-width:768px){.breadcrumb{padding:10px 24px !important}}`}</style>
+        <style>{`@media(max-width:768px){.breadcrumb-bar{padding:10px 24px !important}}`}</style>
         <Link to="/" style={{ color:'#9A8060', textDecoration:'none' }}>Home</Link>
         <span>/</span>
         <Link to="/shop" style={{ color:'#9A8060', textDecoration:'none' }}>Shop</Link>
@@ -146,49 +158,74 @@ export default function ProductDetail() {
         <span style={{ color:D }}>{product.name}</span>
       </div>
 
-      {/* MAIN */}
+      {/* MAIN PRODUCT LAYOUT */}
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:56, padding:'40px 48px', maxWidth:1200, margin:'0 auto' }}>
-        <style>{`@media(max-width:768px){.product-layout{grid-template-columns:1fr !important; padding:20px 24px !important; gap:28px !important}}`}</style>
+        <style>{`
+          .product-main-layout { display:grid; grid-template-columns:1fr 1fr; gap:56px; padding:40px 48px; max-width:1200px; margin:0 auto; }
+          @media(max-width:768px){
+            .product-main-layout { grid-template-columns:1fr !important; padding:20px 24px !important; gap:24px !important; }
+            .nav-arrow { width:36px !important; height:36px !important; font-size:16px !important; }
+          }
+        `}</style>
 
         {/* LEFT — IMAGES */}
         <div>
-          {/* Main image */}
-          <div style={{ aspectRatio:'3/4', background: displayImage ? 'none' : (product.bg||'linear-gradient(145deg,#F0E4C8,#E8D5A8)'), borderRadius:4, overflow:'hidden', marginBottom:10, border:'1px solid rgba(193,152,60,0.12)', boxShadow:'0 8px 40px rgba(42,31,14,0.08)', position:'relative' }}>
-            {displayImage ? (
-              <img src={displayImage} alt={product.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+          {/* Main image with nav arrows */}
+          <div style={{ aspectRatio:'3/4', background: currentImage ? 'none' : (product.bg||'linear-gradient(145deg,#F0E4C8,#E8D5A8)'), borderRadius:4, overflow:'hidden', marginBottom:10, border:'1px solid rgba(193,152,60,0.12)', boxShadow:'0 8px 40px rgba(42,31,14,0.08)', position:'relative' }}>
+            {currentImage ? (
+              <img src={currentImage} alt={product.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
             ) : (
               <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:8 }}>
                 <span style={{ fontSize:80 }}>👗</span>
                 <p style={{ fontSize:10, color:'rgba(42,31,14,0.3)', letterSpacing:'0.15em', textTransform:'uppercase' }}>Foto Produk</p>
               </div>
             )}
+
             {product.badge && (
               <div style={{ position:'absolute', top:14, left:14, background:`linear-gradient(135deg,${G},#D4AA50)`, color:C, fontSize:9, letterSpacing:'0.2em', textTransform:'uppercase', padding:'4px 10px', fontFamily:sans }}>
                 {product.badge}
               </div>
             )}
+
+            {/* Prev / Next arrows */}
+            {allImages.length > 1 && (
+              <>
+                <button className="nav-arrow" onClick={prevImage}
+                  style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', width:44, height:44, borderRadius:'50%', background:'rgba(253,251,247,0.92)', border:'none', cursor:'pointer', fontSize:20, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 12px rgba(42,31,14,0.15)', transition:'all 0.2s', zIndex:2 }}
+                  onMouseEnter={e=>e.currentTarget.style.background='rgba(253,251,247,1)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='rgba(253,251,247,0.92)'}>
+                  ‹
+                </button>
+                <button className="nav-arrow" onClick={nextImage}
+                  style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', width:44, height:44, borderRadius:'50%', background:'rgba(253,251,247,0.92)', border:'none', cursor:'pointer', fontSize:20, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 12px rgba(42,31,14,0.15)', transition:'all 0.2s', zIndex:2 }}
+                  onMouseEnter={e=>e.currentTarget.style.background='rgba(253,251,247,1)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='rgba(253,251,247,0.92)'}>
+                  ›
+                </button>
+                {/* Image counter */}
+                <div style={{ position:'absolute', bottom:12, right:12, background:'rgba(42,31,14,0.5)', color:C, fontSize:10, padding:'3px 8px', borderRadius:20, fontFamily:sans }}>
+                  {activeIndex+1} / {allImages.length}
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Thumbnails */}
-          {allImages && allImages.length > 1 && (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
-              {allImages.slice(0,8).map((img, i) => (
-                <div key={i} onClick={() => { setActiveImage(i); setSelectedColor(null) }}
-                  style={{ aspectRatio:'1', borderRadius:4, overflow:'hidden', border: activeImage===i && !colorImage ? `2px solid ${G}` : '2px solid transparent', cursor:'pointer', opacity: activeImage===i && !colorImage ? 1 : 0.6, transition:'all 0.2s' }}>
-                  <img src={img} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Placeholder thumbnails if no images */}
-          {!allImages && (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
-              {[1,2,3,4].map(i => (
-                <div key={i} style={{ aspectRatio:'1', background:'linear-gradient(145deg,#F5ECD7,#EDD9B8)', borderRadius:4, border: i===1?`2px solid ${G}`:'2px solid transparent', opacity:i===1?1:0.5, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <span style={{ fontSize:20 }}>👗</span>
-                </div>
-              ))}
+          {/* ALL Thumbnails — no limit */}
+          {allImages.length > 1 && (
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+              {allImages.map((img, i) => {
+                const colorForImg = product.color_images?.find(c => c.image_url === img)
+                return (
+                  <div key={i} onClick={() => setActiveIndex(i)}
+                    style={{ width:64, height:64, borderRadius:4, overflow:'hidden', border:`2px solid`, borderColor: activeIndex===i ? G : 'transparent', cursor:'pointer', opacity: activeIndex===i ? 1 : 0.65, transition:'all 0.2s', flexShrink:0, position:'relative' }}>
+                    <img src={img} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                    {/* Color indicator dot */}
+                    {colorForImg && (
+                      <div style={{ position:'absolute', bottom:2, right:2, width:10, height:10, borderRadius:'50%', background:colorForImg.hex, border:'1.5px solid white' }} />
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
@@ -217,9 +254,8 @@ export default function ProductDetail() {
                   const colorObj = product.color_images?.find(c => c.name === cn)
                   const isSelected = selectedColor === cn
                   return (
-                    <button key={cn} onClick={() => { setSelectedColor(cn); setActiveImage(0) }}
-                      style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', border:`2px solid`, borderColor: isSelected ? D : 'rgba(193,152,60,0.2)', borderRadius:4, background: isSelected ? D : 'transparent', cursor:'pointer', transition:'all 0.2s', position:'relative', overflow:'hidden' }}>
-                      {/* Color photo thumbnail if available */}
+                    <button key={cn} onClick={() => selectColor(cn)}
+                      style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', border:`2px solid`, borderColor: isSelected ? D : 'rgba(193,152,60,0.2)', borderRadius:4, background: isSelected ? D : 'transparent', cursor:'pointer', transition:'all 0.2s' }}>
                       {colorObj?.image_url ? (
                         <img src={colorObj.image_url} alt={cn} style={{ width:20, height:20, objectFit:'cover', borderRadius:2, flexShrink:0 }} />
                       ) : (
@@ -254,11 +290,11 @@ export default function ProductDetail() {
           <div>
             <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:'#9A8060', marginBottom:10 }}>Jumlah</div>
             <div style={{ display:'flex', alignItems:'center', width:'fit-content', border:`1px solid rgba(193,152,60,0.25)`, borderRadius:4, overflow:'hidden' }}>
-              <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ width:40, height:40, border:'none', background:LB, cursor:'pointer', fontSize:18, color:D }}
+              <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ width:40, height:40, border:'none', background:LB, cursor:'pointer', fontSize:18, color:D, transition:'background 0.2s' }}
                 onMouseEnter={e=>e.currentTarget.style.background='#E8D5A8'}
                 onMouseLeave={e=>e.currentTarget.style.background=LB}>−</button>
               <span style={{ width:48, height:40, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:600, color:D, borderLeft:`1px solid rgba(193,152,60,0.2)`, borderRight:`1px solid rgba(193,152,60,0.2)` }}>{qty}</span>
-              <button onClick={() => setQty(q => q+1)} style={{ width:40, height:40, border:'none', background:LB, cursor:'pointer', fontSize:18, color:D }}
+              <button onClick={() => setQty(q => q+1)} style={{ width:40, height:40, border:'none', background:LB, cursor:'pointer', fontSize:18, color:D, transition:'background 0.2s' }}
                 onMouseEnter={e=>e.currentTarget.style.background='#E8D5A8'}
                 onMouseLeave={e=>e.currentTarget.style.background=LB}>+</button>
             </div>
@@ -266,12 +302,14 @@ export default function ProductDetail() {
 
           {/* BUTTONS */}
           <div style={{ display:'flex', gap:12, flexWrap:'wrap', paddingTop:8 }}>
-            <button onClick={handleAddToCart} style={{ flex:1, minWidth:140, padding:'14px 24px', background:`linear-gradient(135deg,${G},#D4AA50,${G})`, color:C, border:'none', borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans, boxShadow:'0 6px 20px rgba(193,152,60,0.3)', transition:'all 0.3s' }}
+            <button onClick={handleAddToCart}
+              style={{ flex:1, minWidth:140, padding:'14px 24px', background:`linear-gradient(135deg,${G},#D4AA50,${G})`, color:C, border:'none', borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans, boxShadow:'0 6px 20px rgba(193,152,60,0.3)', transition:'all 0.3s' }}
               onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 10px 28px rgba(193,152,60,0.45)'}}
               onMouseLeave={e=>{e.currentTarget.style.transform='none';e.currentTarget.style.boxShadow='0 6px 20px rgba(193,152,60,0.3)'}}>
               + Keranjang
             </button>
-            <button onClick={handleBuyNow} style={{ flex:1, minWidth:140, padding:'14px 24px', background:D, color:C, border:'none', borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans, transition:'all 0.3s' }}
+            <button onClick={handleBuyNow}
+              style={{ flex:1, minWidth:140, padding:'14px 24px', background:D, color:C, border:'none', borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans, transition:'all 0.3s' }}
               onMouseEnter={e=>e.currentTarget.style.opacity='0.85'}
               onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
               Beli Sekarang
@@ -283,27 +321,27 @@ export default function ProductDetail() {
             <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G, marginBottom:10 }}>Info Pengiriman</div>
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
               {[
-                ['🚚','Zona 1 — Jawa & Bali','Gratis ongkir'],
+                ['🚚','Zona 1 — Jawa & Bali','Gratis'],
                 ['📦','Zona 2 — Sumatera, Kalimantan, Sulawesi','Rp15.000 + Rp10.000/kg'],
                 ['📦','Zona 3 — NTB, NTT, Maluku','Rp25.000 + Rp15.000/kg'],
                 ['📦','Zona 4 — Papua','Rp35.000 + Rp20.000/kg'],
               ].map(([icon,zone,rate]) => (
                 <div key={zone} style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'#7A6040', gap:8 }}>
-                  <span style={{ flexShrink:0 }}>{icon} {zone}</span>
+                  <span>{icon} {zone}</span>
                   <span style={{ fontWeight:600, color:D, flexShrink:0 }}>{rate}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div style={{ fontSize:11, color:'#9A8060' }}>⚖️ Berat produk: {product.weight||300}g</div>
+          <div style={{ fontSize:11, color:'#9A8060' }}>⚖️ Berat: {product.weight||300}g</div>
         </div>
       </div>
 
       {/* RELATED PRODUCTS */}
       {related.length > 0 && (
         <section style={{ padding:'48px 48px 80px', borderTop:`1px solid rgba(193,152,60,0.1)` }}>
-          <style>{`@media(max-width:768px){.related{padding:32px 24px 56px !important}}`}</style>
+          <style>{`@media(max-width:768px){.related-pad{padding:32px 24px 56px !important}}`}</style>
           <div style={{ marginBottom:32 }}>
             <div style={{ fontSize:10, letterSpacing:'0.3em', textTransform:'uppercase', color:G, marginBottom:8 }}>✦ Mungkin Kamu Suka</div>
             <h2 style={{ fontSize:28, fontWeight:400, fontFamily:serif, color:D }}>Produk <span style={{ fontStyle:'italic', color:G }}>Serupa</span></h2>
@@ -315,11 +353,8 @@ export default function ProductDetail() {
                 <Link key={p.id} to={`/shop/${p.slug}`} style={{ textDecoration:'none', color:'inherit', display:'block', transition:'transform 0.3s' }}
                   onMouseEnter={e=>e.currentTarget.style.transform='translateY(-5px)'}
                   onMouseLeave={e=>e.currentTarget.style.transform='none'}>
-                  <div className="prod-img" style={{ borderRadius:4, background: thumb?'none':(p.bg||'linear-gradient(145deg,#F0E4C8,#E8D5A8)'), display:'flex', alignItems:'center', justifyContent:'center', marginBottom:12, border:'1px solid rgba(193,152,60,0.15)', overflow:'hidden', position:'relative' }}>
-                    {thumb
-                      ? <img src={thumb} alt={p.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                      : <span style={{ fontSize:48 }}>👗</span>
-                    }
+                  <div className="prod-img" style={{ borderRadius:4, background:thumb?'none':(p.bg||'linear-gradient(145deg,#F0E4C8,#E8D5A8)'), display:'flex', alignItems:'center', justifyContent:'center', marginBottom:12, border:'1px solid rgba(193,152,60,0.15)', overflow:'hidden', position:'relative' }}>
+                    {thumb ? <img src={thumb} alt={p.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <span style={{ fontSize:48 }}>👗</span>}
                     {p.badge && <div style={{ position:'absolute', top:10, left:10, background:`linear-gradient(135deg,${G},#D4AA50)`, color:C, fontSize:8, padding:'3px 8px', fontFamily:sans }}>{p.badge}</div>}
                   </div>
                   <div style={{ fontSize:14, fontFamily:serif, color:D, marginBottom:2 }}>{p.name}</div>
