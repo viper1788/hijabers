@@ -30,17 +30,23 @@ const PROVINCE_ZONE = {
   "Papua":"zona4","Papua Barat":"zona4"
 }
 
+const SHIPPING_DISPLAY = [
+  { zone:'Zona 1', area:'Jawa & Bali', rate:'Gratis', free:true },
+  { zone:'Zona 2', area:'Sumatera, Kalimantan, Sulawesi', rate:'Rp 15.000 / kg', free:false },
+  { zone:'Zona 3', area:'NTB, NTT, Maluku', rate:'Rp 25.000 / kg', free:false },
+  { zone:'Zona 4', area:'Papua', rate:'Rp 35.000 / kg', free:false },
+]
+
 export default function CartCheckout() {
   const { cartItems, removeFromCart, updateQty, clearCart, cartTotal, cartWeight } = useCart()
   const navigate = useNavigate()
 
-  const [step, setStep] = useState('cart') // cart | checkout | success
+  const [step, setStep] = useState('cart')
   const [submitting, setSubmitting] = useState(false)
   const [orderResult, setOrderResult] = useState(null)
-
   const [form, setForm] = useState({
-    customer_name: '', customer_phone: '', customer_address: '',
-    customer_city: '', customer_province: '', notes: ''
+    customer_name:'', customer_phone:'', customer_address:'',
+    customer_city:'', customer_province:'', notes:''
   })
   const [formErrors, setFormErrors] = useState({})
 
@@ -73,42 +79,31 @@ export default function CartCheckout() {
         ...form,
         zone: selectedZone,
         items: cartItems.map(i => ({
-          name: i.product.name,
-          color: i.color,
-          size: i.size,
-          qty: i.qty,
-          price: i.product.price,
+          name: i.product.name, color: i.color, size: i.size,
+          qty: i.qty, price: i.product.price,
         })),
-        subtotal: cartTotal,
-        shipping_cost: shippingCost,
-        total: grandTotal,
+        subtotal: cartTotal, shipping_cost: shippingCost, total: grandTotal,
       }
       const order = await createOrder(orderData)
       setOrderResult(order)
-      // Open WhatsApp
       const msg = buildWhatsAppMessage(order)
       window.open(`https://wa.me/${WA_NUMBER}?text=${msg}`, '_blank')
       clearCart()
       setStep('success')
-    } catch (err) {
-      // Even if Supabase fails, still send via WhatsApp
+    } catch {
       const fallbackOrder = {
         ...form,
         order_code: `HC-${Date.now().toString().slice(-6)}`,
         zone: selectedZone,
         items: cartItems.map(i => ({ name:i.product.name, color:i.color, size:i.size, qty:i.qty, price:i.product.price })),
-        subtotal: cartTotal,
-        shipping_cost: shippingCost,
-        total: grandTotal,
+        subtotal: cartTotal, shipping_cost: shippingCost, total: grandTotal,
       }
       const msg = buildWhatsAppMessage(fallbackOrder)
       window.open(`https://wa.me/${WA_NUMBER}?text=${msg}`, '_blank')
       clearCart()
       setOrderResult(fallbackOrder)
       setStep('success')
-    } finally {
-      setSubmitting(false)
-    }
+    } finally { setSubmitting(false) }
   }
 
   // ── EMPTY CART ──
@@ -132,7 +127,6 @@ export default function CartCheckout() {
       <p style={{ fontSize:13, color:'#7A6040', maxWidth:400, lineHeight:1.8 }}>
         WhatsApp sudah terbuka otomatis dengan detail pesananmu. Silakan kirim pesan tersebut ke kami untuk konfirmasi.
       </p>
-      {/* Payment reminder */}
       <div style={{ background:LB, border:`1px solid rgba(193,152,60,0.2)`, borderRadius:8, padding:'20px 28px', maxWidth:360, width:'100%' }}>
         <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G, marginBottom:12 }}>Info Pembayaran</div>
         <div style={{ fontSize:13, color:D, lineHeight:2 }}>
@@ -143,12 +137,8 @@ export default function CartCheckout() {
         </div>
       </div>
       <div style={{ display:'flex', gap:12, flexWrap:'wrap', justifyContent:'center' }}>
-        <Link to="/shop" style={{ padding:'12px 28px', background:`linear-gradient(135deg,${G},#D4AA50)`, color:C, borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', textDecoration:'none', fontFamily:sans }}>
-          Lanjut Belanja
-        </Link>
-        <Link to="/" style={{ padding:'12px 28px', background:'transparent', color:D, border:`1px solid rgba(42,31,14,0.2)`, borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', textDecoration:'none', fontFamily:sans }}>
-          Kembali ke Home
-        </Link>
+        <Link to="/shop" style={{ padding:'12px 28px', background:`linear-gradient(135deg,${G},#D4AA50)`, color:C, borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', textDecoration:'none', fontFamily:sans }}>Lanjut Belanja</Link>
+        <Link to="/" style={{ padding:'12px 28px', background:'transparent', color:D, border:`1px solid rgba(42,31,14,0.2)`, borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', textDecoration:'none', fontFamily:sans }}>Kembali ke Home</Link>
       </div>
     </div>
   )
@@ -157,61 +147,86 @@ export default function CartCheckout() {
     <div style={{ fontFamily:sans, paddingTop:72 }}>
       {/* HEADER */}
       <div style={{ background:'linear-gradient(135deg,#F5EDD8,#EDE0C4)', padding:'32px 48px 24px', borderBottom:`1px solid rgba(193,152,60,0.15)` }}>
-        <style>{`@media(max-width:768px){.cart-header{padding:24px !important}}`}</style>
-        <div style={{ fontSize:10, letterSpacing:'0.3em', textTransform:'uppercase', color:G, marginBottom:8 }}>✦ {step === 'cart' ? 'Keranjang' : 'Checkout'}</div>
+        <style>{`@media(max-width:768px){.cart-header-pad{padding:24px !important}}`}</style>
+        <div style={{ fontSize:10, letterSpacing:'0.3em', textTransform:'uppercase', color:G, marginBottom:8 }}>✦ {step==='cart'?'Keranjang':'Checkout'}</div>
         <h1 style={{ fontSize:32, fontWeight:400, fontFamily:serif, color:D }}>
-          {step === 'cart' ? <>Keranjang <span style={{ fontStyle:'italic', color:G }}>Belanja</span></> : <>Detail <span style={{ fontStyle:'italic', color:G }}>Pengiriman</span></>}
+          {step==='cart' ? <>Keranjang <span style={{ fontStyle:'italic', color:G }}>Belanja</span></> : <>Detail <span style={{ fontStyle:'italic', color:G }}>Pengiriman</span></>}
         </h1>
-        {/* Steps */}
+        {/* Steps indicator */}
         <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:16 }}>
-          {['cart','checkout'].map((s, i) => (
+          {['cart','checkout'].map((s,i) => (
             <React.Fragment key={s}>
               <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                <div style={{ width:24, height:24, borderRadius:'50%', background: step===s||( step==='checkout' && s==='cart') ? G : 'rgba(193,152,60,0.2)', color: step===s||(step==='checkout'&&s==='cart') ? C : '#9A8060', fontSize:11, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700 }}>{i+1}</div>
-                <span style={{ fontSize:11, color: step===s ? D : '#9A8060', textTransform:'uppercase', letterSpacing:'0.1em' }}>{s==='cart'?'Keranjang':'Checkout'}</span>
+                <div style={{ width:24, height:24, borderRadius:'50%', background: step===s||(step==='checkout'&&s==='cart')?G:'rgba(193,152,60,0.2)', color: step===s||(step==='checkout'&&s==='cart')?C:'#9A8060', fontSize:11, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700 }}>{i+1}</div>
+                <span style={{ fontSize:11, color: step===s?D:'#9A8060', textTransform:'uppercase', letterSpacing:'0.1em' }}>{s==='cart'?'Keranjang':'Checkout'}</span>
               </div>
-              {i === 0 && <div style={{ flex:1, height:1, background:'rgba(193,152,60,0.2)', maxWidth:40 }} />}
+              {i===0 && <div style={{ flex:1, height:1, background:'rgba(193,152,60,0.2)', maxWidth:40 }} />}
             </React.Fragment>
           ))}
         </div>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 380px', gap:32, padding:'32px 48px 80px', maxWidth:1200, margin:'0 auto' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 360px', gap:32, padding:'32px 48px 80px', maxWidth:1200, margin:'0 auto' }}>
         <style>{`@media(max-width:900px){.cart-layout{grid-template-columns:1fr !important; padding:24px !important}}`}</style>
 
         {/* LEFT */}
         <div>
           {/* ── STEP 1: CART ── */}
-          {step === 'cart' && (
+          {step==='cart' && (
             <div>
               <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-                {cartItems.map(item => (
-                  <div key={item.key} style={{ background:C, borderRadius:4, border:`1px solid rgba(193,152,60,0.12)`, padding:'16px 20px', display:'flex', gap:16, alignItems:'center' }}>
-                    {/* Image */}
-                    <div style={{ width:72, height:88, background: item.product.bg||'linear-gradient(145deg,#F0E4C8,#E8D5A8)', borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                      <span style={{ fontSize:28 }}>👗</span>
-                    </div>
-                    {/* Info */}
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:14, fontWeight:500, fontFamily:serif, color:D, marginBottom:2 }}>{item.product.name}</div>
-                      <div style={{ fontSize:10, color:'#9A8060', letterSpacing:'0.1em', marginBottom:8 }}>
-                        {item.color} · {item.size}
+                {cartItems.map(item => {
+                  const thumb = item.product.images?.[0] || null
+                  const colorObj = item.product.color_images?.find(c => c.name === item.color)
+                  const colorThumb = colorObj?.image_url || thumb
+                  return (
+                    <div key={item.key} style={{ background:C, borderRadius:4, border:`1px solid rgba(193,152,60,0.12)`, padding:'16px 20px', display:'flex', gap:16, alignItems:'center' }}>
+                      {/* Product thumbnail */}
+                      <div style={{ width:76, height:96, flexShrink:0, borderRadius:4, overflow:'hidden', background: colorThumb?'none':(item.product.bg||'linear-gradient(145deg,#F0E4C8,#E8D5A8)'), display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid rgba(193,152,60,0.1)' }}>
+                        {colorThumb
+                          ? <img src={colorThumb} alt={item.product.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                          : <span style={{ fontSize:28 }}>👗</span>
+                        }
                       </div>
-                      <div style={{ fontSize:14, fontWeight:600, fontFamily:serif, color:D }}>
-                        Rp {(item.product.price * item.qty).toLocaleString('id-ID')}
+                      {/* Info */}
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:14, fontWeight:500, fontFamily:serif, color:D, marginBottom:2 }}>{item.product.name}</div>
+                        <div style={{ fontSize:10, color:'#9A8060', letterSpacing:'0.1em', marginBottom:2 }}>
+                          {item.color !== 'Default' && item.color} {item.color !== 'Default' && item.size !== 'One Size' && '·'} {item.size !== 'One Size' && item.size}
+                        </div>
+                        <div style={{ fontSize:11, color:'#9A8060', marginBottom:8 }}>⚖️ {item.product.weight||300}g / pcs</div>
+                        <div style={{ fontSize:14, fontWeight:600, fontFamily:serif, color:D }}>
+                          Rp {(item.product.price * item.qty).toLocaleString('id-ID')}
+                        </div>
                       </div>
+                      {/* Qty */}
+                      <div style={{ display:'flex', alignItems:'center', border:`1px solid rgba(193,152,60,0.2)`, borderRadius:4, overflow:'hidden', flexShrink:0 }}>
+                        <button onClick={() => updateQty(item.key,-1)} style={{ width:32, height:32, border:'none', background:LB, cursor:'pointer', fontSize:16, color:D }}>−</button>
+                        <span style={{ width:36, height:32, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:600, color:D, borderLeft:`1px solid rgba(193,152,60,0.15)`, borderRight:`1px solid rgba(193,152,60,0.15)` }}>{item.qty}</span>
+                        <button onClick={() => updateQty(item.key,1)} style={{ width:32, height:32, border:'none', background:LB, cursor:'pointer', fontSize:16, color:D }}>+</button>
+                      </div>
+                      <button onClick={() => removeFromCart(item.key)} style={{ background:'none', border:'none', cursor:'pointer', color:'#C0A0A0', fontSize:18, flexShrink:0, padding:4 }}>🗑️</button>
                     </div>
-                    {/* Qty */}
-                    <div style={{ display:'flex', alignItems:'center', gap:0, border:`1px solid rgba(193,152,60,0.2)`, borderRadius:4, overflow:'hidden', flexShrink:0 }}>
-                      <button onClick={() => updateQty(item.key, -1)} style={{ width:32, height:32, border:'none', background:LB, cursor:'pointer', fontSize:16, color:D }}>−</button>
-                      <span style={{ width:36, height:32, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:600, color:D, borderLeft:`1px solid rgba(193,152,60,0.15)`, borderRight:`1px solid rgba(193,152,60,0.15)` }}>{item.qty}</span>
-                      <button onClick={() => updateQty(item.key, 1)} style={{ width:32, height:32, border:'none', background:LB, cursor:'pointer', fontSize:16, color:D }}>+</button>
-                    </div>
-                    {/* Remove */}
-                    <button onClick={() => removeFromCart(item.key)} style={{ background:'none', border:'none', cursor:'pointer', color:'#C0A0A0', fontSize:18, flexShrink:0, padding:4 }}>🗑️</button>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
+
+              {/* Shipping info */}
+              <div style={{ background:LB, borderRadius:4, padding:'16px 20px', marginTop:20, border:`1px solid rgba(193,152,60,0.12)` }}>
+                <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G, marginBottom:12 }}>Info Ongkir</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {SHIPPING_DISPLAY.map(s => (
+                    <div key={s.zone} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:12 }}>
+                      <div>
+                        <span style={{ fontWeight:600, color:D }}>{s.zone}</span>
+                        <span style={{ color:'#9A8060', marginLeft:6 }}>— {s.area}</span>
+                      </div>
+                      <span style={{ fontWeight:600, color: s.free?'#6B9B6B':D, flexShrink:0, marginLeft:8 }}>{s.rate}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <button onClick={() => setStep('checkout')} style={{ width:'100%', marginTop:20, padding:'14px', background:`linear-gradient(135deg,${G},#D4AA50,${G})`, color:C, border:'none', borderRadius:2, fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans, boxShadow:'0 6px 20px rgba(193,152,60,0.3)' }}>
                 Lanjut ke Checkout →
               </button>
@@ -219,76 +234,58 @@ export default function CartCheckout() {
           )}
 
           {/* ── STEP 2: CHECKOUT FORM ── */}
-          {step === 'checkout' && (
+          {step==='checkout' && (
             <div>
               <button onClick={() => setStep('cart')} style={{ background:'none', border:'none', cursor:'pointer', color:'#9A8060', fontSize:12, fontFamily:sans, marginBottom:24, display:'flex', alignItems:'center', gap:6 }}>
                 ← Kembali ke Keranjang
               </button>
 
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
-                <style>{`@media(max-width:600px){.form-grid{grid-template-columns:1fr !important}}`}</style>
-
-                {/* Name */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+                <style>{`@media(max-width:600px){.checkout-form-grid{grid-template-columns:1fr !important}}`}</style>
                 <div style={{ gridColumn:'1/-1' }}>
                   <label className="form-label">Nama Lengkap *</label>
-                  <input value={form.customer_name} onChange={e=>updateForm('customer_name',e.target.value)}
-                    className="form-input" placeholder="Nama penerima" />
+                  <input value={form.customer_name} onChange={e=>updateForm('customer_name',e.target.value)} className="form-input" placeholder="Nama penerima" />
                   {formErrors.customer_name && <div style={{ fontSize:10, color:'#DC2626', marginTop:4 }}>{formErrors.customer_name}</div>}
                 </div>
-
-                {/* Phone */}
                 <div style={{ gridColumn:'1/-1' }}>
                   <label className="form-label">Nomor HP / WhatsApp *</label>
-                  <input value={form.customer_phone} onChange={e=>updateForm('customer_phone',e.target.value)}
-                    className="form-input" placeholder="08xxxxxxxxxx" type="tel" />
+                  <input value={form.customer_phone} onChange={e=>updateForm('customer_phone',e.target.value)} className="form-input" placeholder="08xxxxxxxxxx" type="tel" />
                   {formErrors.customer_phone && <div style={{ fontSize:10, color:'#DC2626', marginTop:4 }}>{formErrors.customer_phone}</div>}
                 </div>
-
-                {/* Address */}
                 <div style={{ gridColumn:'1/-1' }}>
                   <label className="form-label">Alamat Lengkap *</label>
-                  <textarea value={form.customer_address} onChange={e=>updateForm('customer_address',e.target.value)}
-                    className="form-input" placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan, kecamatan" rows={3}
-                    style={{ resize:'vertical' }} />
+                  <textarea value={form.customer_address} onChange={e=>updateForm('customer_address',e.target.value)} className="form-input" placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan, kecamatan" rows={3} style={{ resize:'vertical' }} />
                   {formErrors.customer_address && <div style={{ fontSize:10, color:'#DC2626', marginTop:4 }}>{formErrors.customer_address}</div>}
                 </div>
-
-                {/* City */}
                 <div>
                   <label className="form-label">Kota / Kabupaten *</label>
-                  <input value={form.customer_city} onChange={e=>updateForm('customer_city',e.target.value)}
-                    className="form-input" placeholder="Nama kota" />
+                  <input value={form.customer_city} onChange={e=>updateForm('customer_city',e.target.value)} className="form-input" placeholder="Nama kota" />
                   {formErrors.customer_city && <div style={{ fontSize:10, color:'#DC2626', marginTop:4 }}>{formErrors.customer_city}</div>}
                 </div>
-
-                {/* Province */}
                 <div>
                   <label className="form-label">Provinsi *</label>
-                  <select value={form.customer_province} onChange={e=>updateForm('customer_province',e.target.value)}
-                    className="form-input" style={{ cursor:'pointer' }}>
+                  <select value={form.customer_province} onChange={e=>updateForm('customer_province',e.target.value)} className="form-input" style={{ cursor:'pointer' }}>
                     <option value="">Pilih Provinsi</option>
-                    {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+                    {PROVINCES.map(p=><option key={p} value={p}>{p}</option>)}
                   </select>
                   {formErrors.customer_province && <div style={{ fontSize:10, color:'#DC2626', marginTop:4 }}>{formErrors.customer_province}</div>}
                 </div>
 
-                {/* Zone info */}
+                {/* Zone detected */}
                 {selectedZone && (
                   <div style={{ gridColumn:'1/-1', background:LB, borderRadius:4, padding:'12px 16px', border:`1px solid rgba(193,152,60,0.15)` }}>
-                    <div style={{ fontSize:10, color:G, letterSpacing:'0.15em', textTransform:'uppercase', marginBottom:4 }}>Zona Pengiriman Terdeteksi</div>
+                    <div style={{ fontSize:10, color:G, letterSpacing:'0.15em', textTransform:'uppercase', marginBottom:4 }}>Zona Pengiriman</div>
                     <div style={{ fontSize:13, color:D, fontWeight:600 }}>{zoneInfo?.label}</div>
                     <div style={{ fontSize:12, color:'#7A6040', marginTop:2 }}>
-                      Ongkir: {shippingCost === 0 ? <span style={{ color:'#6B9B6B', fontWeight:700 }}>GRATIS 🎉</span> : `Rp ${shippingCost.toLocaleString('id-ID')}`}
+                      Ongkir: {shippingCost===0 ? <span style={{ color:'#6B9B6B', fontWeight:700 }}>GRATIS 🎉</span> : `Rp ${shippingCost.toLocaleString('id-ID')}`}
+                      <span style={{ color:'#9A8060', marginLeft:6 }}>({Math.ceil(cartWeight/1000)} kg)</span>
                     </div>
                   </div>
                 )}
 
-                {/* Notes */}
                 <div style={{ gridColumn:'1/-1' }}>
                   <label className="form-label">Catatan (opsional)</label>
-                  <textarea value={form.notes} onChange={e=>updateForm('notes',e.target.value)}
-                    className="form-input" placeholder="Instruksi khusus, warna alternatif, dll." rows={2}
-                    style={{ resize:'vertical' }} />
+                  <textarea value={form.notes} onChange={e=>updateForm('notes',e.target.value)} className="form-input" placeholder="Instruksi khusus, warna alternatif, dll." rows={2} style={{ resize:'vertical' }} />
                 </div>
               </div>
 
@@ -299,17 +296,13 @@ export default function CartCheckout() {
                   <div>Transfer ke rekening BCA:</div>
                   <div style={{ fontSize:22, fontWeight:700, fontFamily:serif, letterSpacing:'0.08em' }}>7560515655</div>
                   <div style={{ fontSize:12, color:'#7A6040' }}>a/n Weta Novinie</div>
-                  <div style={{ marginTop:8, fontSize:12, color:'#7A6040' }}>
-                    Setelah klik "Pesan via WhatsApp", kirim pesan tersebut ke kami beserta bukti transfer.
-                  </div>
+                  <div style={{ marginTop:8, fontSize:12, color:'#7A6040' }}>Setelah klik "Pesan via WhatsApp", kirim pesan tersebut beserta bukti transfer.</div>
                 </div>
               </div>
 
               <button onClick={handleOrder} disabled={submitting}
-                style={{ width:'100%', marginTop:20, padding:'16px', background: submitting ? '#C0A88A' : `linear-gradient(135deg,${G},#D4AA50,${G})`, color:C, border:'none', borderRadius:2, fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor: submitting ? 'not-allowed' : 'pointer', fontFamily:sans, boxShadow:'0 6px 20px rgba(193,152,60,0.3)', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-                {submitting ? (
-                  <><div style={{ width:16, height:16, border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid white', borderRadius:'50%', animation:'spin 1s linear infinite' }} />Memproses...</>
-                ) : '📱 Pesan via WhatsApp'}
+                style={{ width:'100%', marginTop:20, padding:'16px', background: submitting?'#C0A88A':`linear-gradient(135deg,${G},#D4AA50,${G})`, color:C, border:'none', borderRadius:2, fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor: submitting?'not-allowed':'pointer', fontFamily:sans, boxShadow:'0 6px 20px rgba(193,152,60,0.3)', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                {submitting ? <><div style={{ width:16, height:16, border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid white', borderRadius:'50%', animation:'spin 1s linear infinite' }} />Memproses...</> : '📱 Pesan via WhatsApp'}
               </button>
             </div>
           )}
@@ -322,18 +315,31 @@ export default function CartCheckout() {
               Ringkasan Order
             </div>
             <div style={{ padding:'16px 20px' }}>
-              {/* Items */}
-              {cartItems.map(item => (
-                <div key={item.key} style={{ display:'flex', justifyContent:'space-between', marginBottom:10, gap:8 }}>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:12, color:D, fontWeight:500 }}>{item.product.name}</div>
-                    <div style={{ fontSize:10, color:'#9A8060' }}>{item.color} · {item.size} · x{item.qty}</div>
+              {cartItems.map(item => {
+                const thumb = item.product.images?.[0] || null
+                const colorObj = item.product.color_images?.find(c => c.name === item.color)
+                const colorThumb = colorObj?.image_url || thumb
+                return (
+                  <div key={item.key} style={{ display:'flex', gap:10, marginBottom:12, alignItems:'center' }}>
+                    {/* Thumbnail */}
+                    <div style={{ width:44, height:56, flexShrink:0, borderRadius:3, overflow:'hidden', background: colorThumb?'none':(item.product.bg||'linear-gradient(145deg,#F0E4C8,#E8D5A8)'), display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid rgba(193,152,60,0.1)' }}>
+                      {colorThumb
+                        ? <img src={colorThumb} alt={item.product.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                        : <span style={{ fontSize:16 }}>👗</span>
+                      }
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:12, color:D, fontWeight:500 }}>{item.product.name}</div>
+                      <div style={{ fontSize:10, color:'#9A8060' }}>
+                        {item.color !== 'Default' && item.color} {item.size !== 'One Size' && `· ${item.size}`} · x{item.qty}
+                      </div>
+                    </div>
+                    <div style={{ fontSize:12, color:D, fontWeight:600, flexShrink:0 }}>
+                      Rp {(item.product.price * item.qty).toLocaleString('id-ID')}
+                    </div>
                   </div>
-                  <div style={{ fontSize:12, color:D, fontWeight:600, flexShrink:0 }}>
-                    Rp {(item.product.price * item.qty).toLocaleString('id-ID')}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
 
               <div style={{ borderTop:`1px solid rgba(193,152,60,0.1)`, paddingTop:12, marginTop:4, display:'flex', flexDirection:'column', gap:8 }}>
                 <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'#7A6040' }}>
@@ -341,9 +347,9 @@ export default function CartCheckout() {
                   <span>Rp {cartTotal.toLocaleString('id-ID')}</span>
                 </div>
                 <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'#7A6040' }}>
-                  <span>Ongkir {zoneInfo ? `(${zoneInfo.label.split('—')[0].trim()})` : ''}</span>
-                  <span style={{ color: shippingCost===0 && selectedZone ? '#6B9B6B' : '#7A6040', fontWeight: shippingCost===0 && selectedZone ? 700 : 400 }}>
-                    {!selectedZone ? '—' : shippingCost === 0 ? 'GRATIS' : `Rp ${shippingCost.toLocaleString('id-ID')}`}
+                  <span>Ongkir {zoneInfo?`(${zoneInfo.label.split('—')[0].trim()})`:''}</span>
+                  <span style={{ color: shippingCost===0&&selectedZone?'#6B9B6B':'#7A6040', fontWeight: shippingCost===0&&selectedZone?700:400 }}>
+                    {!selectedZone ? '—' : shippingCost===0 ? 'GRATIS' : `Rp ${shippingCost.toLocaleString('id-ID')}`}
                   </span>
                 </div>
                 <div style={{ display:'flex', justifyContent:'space-between', fontSize:15, color:D, fontWeight:700, fontFamily:serif, paddingTop:8, borderTop:`1px solid rgba(193,152,60,0.1)` }}>
@@ -352,9 +358,8 @@ export default function CartCheckout() {
                 </div>
               </div>
 
-              {/* Weight info */}
               <div style={{ marginTop:12, fontSize:10, color:'#9A8060', textAlign:'center' }}>
-                ⚖️ Total berat: {cartWeight}g
+                ⚖️ Total berat: {cartWeight}g ({Math.ceil(cartWeight/1000)} kg)
               </div>
             </div>
           </div>

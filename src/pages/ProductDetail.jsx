@@ -322,9 +322,9 @@ export default function ProductDetail() {
             <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
               {[
                 ['🚚','Zona 1 — Jawa & Bali','Gratis'],
-                ['📦','Zona 2 — Sumatera, Kalimantan, Sulawesi','Rp15.000 + Rp10.000/kg'],
-                ['📦','Zona 3 — NTB, NTT, Maluku','Rp25.000 + Rp15.000/kg'],
-                ['📦','Zona 4 — Papua','Rp35.000 + Rp20.000/kg'],
+                ['📦','Zona 2 — Sumatera, Kalimantan, Sulawesi','Rp 15.000 / kg'],
+                ['📦','Zona 3 — NTB, NTT, Maluku','Rp 25.000 / kg'],
+                ['📦','Zona 4 — Papua','Rp 35.000 / kg'],
               ].map(([icon,zone,rate]) => (
                 <div key={zone} style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'#7A6040', gap:8 }}>
                   <span>{icon} {zone}</span>
