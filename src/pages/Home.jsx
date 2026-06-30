@@ -64,8 +64,9 @@ export default function Home() {
 
         {/* Mobile hero image */}
         <div className="hero-right-mobile">
-          <div style={{ width:180, height:220, background:'linear-gradient(145deg,#F0E4C8,#E8D5A8)', borderRadius:'90px 90px 70px 70px', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', zIndex:2, boxShadow:'0 20px 60px rgba(193,152,60,0.25)', border:'1px solid rgba(193,152,60,0.2)', animation:'float 6s ease infinite' }}>
-            <img src="/logo.png" alt="h" style={{ width:90, height:90, objectFit:'contain', opacity:0.9 }} />
+          <div style={{ width:200, height:260, borderRadius:'100px 100px 70px 70px', overflow:'hidden', position:'relative', zIndex:2, boxShadow:'0 20px 60px rgba(193,152,60,0.25)', border:'1px solid rgba(193,152,60,0.2)', animation:'float 6s ease infinite' }}>
+            <img src="https://hijabers.id/uploads/products/hero/1.jpg" alt="Hijabers Collective" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+            <img src="/logo.png" alt="h" style={{ position:'absolute', bottom:10, right:10, width:32, height:32, objectFit:'contain', opacity:0.85, filter:'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }} />
           </div>
           <div style={{ position:'absolute', top:20, right:'12%', background:'rgba(253,251,247,0.95)', backdropFilter:'blur(12px)', border:'1px solid rgba(193,152,60,0.2)', borderRadius:10, padding:'8px 14px', boxShadow:'0 4px 16px rgba(42,31,14,0.08)', zIndex:3 }}>
             <div style={{ fontSize:12, fontFamily:serif, color:D }}>New In 🌸</div>
@@ -116,8 +117,9 @@ export default function Home() {
 
         {/* Desktop Hero Right */}
         <div className="hero-right">
-          <div style={{ width:300, height:420, background:'linear-gradient(145deg,#F0E4C8,#E8D5A8)', borderRadius:'150px 150px 100px 100px', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', zIndex:2, boxShadow:'0 32px 80px rgba(193,152,60,0.2)', border:'1px solid rgba(193,152,60,0.2)', animation:'float 6s ease infinite' }}>
-            <img src="/logo.png" alt="h" style={{ width:140, height:140, objectFit:'contain', opacity:0.9 }} />
+          <div style={{ width:320, height:460, borderRadius:'160px 160px 100px 100px', overflow:'hidden', position:'relative', zIndex:2, boxShadow:'0 32px 80px rgba(193,152,60,0.2)', border:'1px solid rgba(193,152,60,0.2)', animation:'float 6s ease infinite' }}>
+            <img src="https://hijabers.id/uploads/products/hero/1.jpg" alt="Hijabers Collective" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+            <img src="/logo.png" alt="h" style={{ position:'absolute', bottom:18, right:18, width:48, height:48, objectFit:'contain', opacity:0.9, filter:'drop-shadow(0 2px 8px rgba(0,0,0,0.3))' }} />
           </div>
           <div style={{ position:'absolute', top:70, right:-10, zIndex:3, background:'rgba(253,251,247,0.95)', backdropFilter:'blur(12px)', border:'1px solid rgba(193,152,60,0.2)', borderRadius:12, padding:'12px 16px', boxShadow:'0 8px 32px rgba(42,31,14,0.08)' }}>
             <div style={{ fontSize:14, fontFamily:serif, color:D }}>New In 🌸</div>
