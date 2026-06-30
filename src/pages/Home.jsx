@@ -55,6 +55,9 @@ export default function Home() {
   const featured = products.filter(p => p.badge).slice(0, 3)
   const displayProducts = featured.length > 0 ? featured : products.slice(0, 3)
 
+  // Only show categories that have at least 1 product
+  const activeCategories = CATEGORIES.filter(cat => products.some(p => p.category === cat))
+
   return (
     <div style={{ fontFamily:sans }}>
 
@@ -153,7 +156,7 @@ export default function Home() {
           <h2 style={{ fontSize:36, fontWeight:400, fontFamily:serif, color:D }}>Temukan <span style={{ fontStyle:'italic', color:G }}>Gayamu</span></h2>
         </div>
         <div className="cat-grid">
-          {CATEGORIES.map(cat => {
+          {activeCategories.map(cat => {
             const catImg = categoryImages[cat] || null
             return (
               <div key={cat} onClick={() => navigate(`/shop?category=${encodeURIComponent(cat)}`)}

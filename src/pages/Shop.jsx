@@ -130,6 +130,9 @@ export default function Shop() {
       return 0
     })
 
+  // Only show categories that have at least 1 product
+  const activeCategories = CATEGORIES.filter(cat => products.some(p => p.category === cat))
+
   return (
     <div style={{ fontFamily:sans, paddingTop:72 }}>
 
@@ -163,7 +166,7 @@ export default function Shop() {
       {/* MOBILE FILTER */}
       {mobileFilterOpen && (
         <div style={{ background:C, borderBottom:`1px solid rgba(193,152,60,0.1)`, padding:'12px 24px', display:'flex', gap:8, flexWrap:'wrap' }}>
-          {['Semua', ...CATEGORIES].map(cat => (
+          {['Semua', ...activeCategories].map(cat => (
             <button key={cat} onClick={()=>setCategory(cat)}
               style={{ padding:'6px 14px', borderRadius:20, border:'1px solid', borderColor: activeCategory===cat?D:'rgba(193,152,60,0.2)', background: activeCategory===cat?D:'transparent', color: activeCategory===cat?C:D, fontSize:11, cursor:'pointer', fontFamily:sans }}>
               {cat}
@@ -177,7 +180,7 @@ export default function Shop() {
         <aside className="filter-sidebar">
           <div style={{ background:C, borderRadius:4, border:`1px solid rgba(193,152,60,0.12)`, overflow:'hidden' }}>
             <div style={{ padding:'14px 18px', borderBottom:`1px solid rgba(193,152,60,0.1)`, fontSize:9, letterSpacing:'0.25em', textTransform:'uppercase', color:G, fontFamily:sans }}>Kategori</div>
-            {['Semua', ...CATEGORIES].map(cat => (
+            {['Semua', ...activeCategories].map(cat => (
               <button key={cat} onClick={()=>setCategory(cat)}
                 style={{ width:'100%', textAlign:'left', padding:'11px 18px', border:'none', borderBottom:`1px solid rgba(193,152,60,0.06)`, background: activeCategory===cat?`linear-gradient(135deg,rgba(193,152,60,0.08),rgba(193,152,60,0.04))`:'transparent', color: activeCategory===cat?G:'#5C4A2A', fontSize:12, cursor:'pointer', fontFamily:sans, transition:'all 0.2s', fontWeight: activeCategory===cat?700:400, borderLeft: activeCategory===cat?`2px solid ${G}`:'2px solid transparent', display:'flex', alignItems:'center', gap:10 }}>
                 {/* Category thumbnail in sidebar */}
