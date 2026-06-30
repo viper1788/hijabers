@@ -1,10 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { CATEGORIES } from '../data/products.js';
+import { CATEGORIES, products as localProducts } from '../data/products.js';
+import { getAllProducts } from '../lib/api.js';
 
 const G = "#C1983C", D = "#2A1F0E", C = "#FDFBF7";
 
 export default function Footer() {
+  const [activeCategories, setActiveCategories] = useState(CATEGORIES);
+
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const data = await getAllProducts();
+        const prods = data && data.length > 0 ? data : localProducts;
+        setActiveCategories(CATEGORIES.filter(cat => prods.some(p => p.category === cat)));
+      } catch {
+        setActiveCategories(CATEGORIES.filter(cat => localProducts.some(p => p.category === cat)));
+      }
+    }
+    loadCategories();
+  }, []);
+
   return (
     <footer style={{ background:D, color:C, padding:'56px 48px 28px', marginTop:'auto' }}>
       <style>{`@media(max-width:768px){.footer-inner{padding:40px 24px 20px !important}}`}</style>
@@ -28,10 +44,12 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Shop */}
+        {/* Shop — only active categories */}
         <div>
           <div style={{ fontSize:9, letterSpacing:'0.3em', textTransform:'uppercase', color:G, marginBottom:16 }}>Shop</div>
-          {CATEGORIES.map(cat => (
+          {activeCategories.length === 0 ? (
+            <Link to="/shop" style={{ fontSize:12, color:'rgba(253,251,247,0.45)', display:'block' }}>Lihat Semua Produk</Link>
+          ) : activeCategories.map(cat => (
             <Link key={cat} to={`/shop?category=${encodeURIComponent(cat)}`} style={{ fontSize:12, color:'rgba(253,251,247,0.45)', marginBottom:8, cursor:'pointer', display:'block', transition:'color 0.2s' }}
               onMouseEnter={e=>e.currentTarget.style.color=G}
               onMouseLeave={e=>e.currentTarget.style.color='rgba(253,251,247,0.45)'}>
