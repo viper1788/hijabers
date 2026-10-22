@@ -160,23 +160,25 @@ export async function updateOrderStatus(id, status) {
 // ─────────────────────────────────────────
 
 export function buildWhatsAppMessage(order) {
+  const fmt = n => 'Rp ' + Math.round(n || 0).toLocaleString('id-ID')
   const itemsList = order.items
-    .map(i => `  - ${i.name} (${i.color}, ${i.size}) x${i.qty} = Rp ${(i.price * i.qty).toLocaleString('id-ID')}`)
+    .map(i => `  - ${i.name}: ${i.qty} seri x ${i.series_qty} pcs = ${i.pcs} pcs @ ${fmt(i.price)} = ${fmt(i.price * i.pcs)}`)
     .join('\n')
 
   return encodeURIComponent(
     `Halo Hijabers Collective! 🌿\n\n` +
-    `Saya ingin konfirmasi pesanan berikut:\n\n` +
+    `Saya ingin order grosir:\n\n` +
     `*Kode Order:* ${order.order_code}\n` +
     `*Nama:* ${order.customer_name}\n` +
     `*HP:* ${order.customer_phone}\n` +
     `*Alamat:* ${order.customer_address}, ${order.customer_city}, ${order.customer_province}\n\n` +
-    `*Produk:*\n${itemsList}\n\n` +
-    `*Subtotal:* Rp ${order.subtotal.toLocaleString('id-ID')}\n` +
-    `*Ongkir:* Rp ${order.shipping_cost.toLocaleString('id-ID')}\n` +
-    `*TOTAL: Rp ${order.total.toLocaleString('id-ID')}*\n\n` +
-    `*Pembayaran:*\nTransfer BCA: 7560515655\na/n Weta Novinie\n\n` +
-    `Mohon konfirmasi ketersediaan produk. Terima kasih! 🙏`
+    `*Produk (semua warna per seri):*\n${itemsList}\n\n` +
+    `*Harga:* Tier ${order.tier || 1}\n` +
+    `*Total pcs:* ${order.total_pcs || ''}\n` +
+    `*Est. berat:* ${order.est_weight_kg || ''} kg\n` +
+    `*TOTAL (belum ongkir): ${fmt(order.total)}*\n\n` +
+    (order.notes ? `*Catatan:* ${order.notes}\n\n` : '') +
+    `Mohon konfirmasi ongkir & ketersediaan. Terima kasih! 🙏`
   )
 }
 

@@ -2,9 +2,9 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../context/CartContext.jsx'
 import { createOrder, buildWhatsAppMessage, WA_NUMBER } from '../lib/api.js'
-import { ZONES, calcShipping } from '../data/products.js'
+import { rp, TIER2_MIN, TIER3_MIN } from '../lib/pricing.js'
 
-const G = "#C1983C", D = "#2A1F0E", C = "#FDFBF7", LB = "#F7F2E8"
+const G = "#B8975A", D = "#2B2926", C = "#FAFAF8", LB = "#F2F0EC"
 const serif = "'Cormorant Garamond',serif"
 const sans = "'Didact Gothic',sans-serif"
 
@@ -17,28 +17,9 @@ const PROVINCES = [
   "Nusa Tenggara Timur","Maluku","Maluku Utara","Papua","Papua Barat"
 ]
 
-const PROVINCE_ZONE = {
-  "DKI Jakarta":"zona1","Jawa Barat":"zona1","Jawa Tengah":"zona1","Jawa Timur":"zona1",
-  "DI Yogyakarta":"zona1","Banten":"zona1","Bali":"zona1",
-  "Aceh":"zona2","Sumatera Utara":"zona2","Sumatera Barat":"zona2","Riau":"zona2",
-  "Jambi":"zona2","Sumatera Selatan":"zona2","Bengkulu":"zona2","Lampung":"zona2",
-  "Kepulauan Riau":"zona2","Kepulauan Bangka Belitung":"zona2","Kalimantan Barat":"zona2",
-  "Kalimantan Tengah":"zona2","Kalimantan Selatan":"zona2","Kalimantan Timur":"zona2",
-  "Kalimantan Utara":"zona2","Sulawesi Utara":"zona2","Sulawesi Tengah":"zona2",
-  "Sulawesi Selatan":"zona2","Sulawesi Tenggara":"zona2","Gorontalo":"zona2","Sulawesi Barat":"zona2",
-  "Nusa Tenggara Barat":"zona3","Nusa Tenggara Timur":"zona3","Maluku":"zona3","Maluku Utara":"zona3",
-  "Papua":"zona4","Papua Barat":"zona4"
-}
-
-const SHIPPING_DISPLAY = [
-  { zone:'Zona 1', area:'Jawa & Bali', rate:'Gratis', free:true },
-  { zone:'Zona 2', area:'Sumatera, Kalimantan, Sulawesi', rate:'Rp 15.000 / kg', free:false },
-  { zone:'Zona 3', area:'NTB, NTT, Maluku', rate:'Rp 25.000 / kg', free:false },
-  { zone:'Zona 4', area:'Papua', rate:'Rp 35.000 / kg', free:false },
-]
-
 export default function CartCheckout() {
-  const { cartItems, removeFromCart, updateQty, clearCart, cartTotal, cartWeight } = useCart()
+  const { cartItems, removeFromCart, updateQty, clearCart, cartTotal, cartWeight, cartPcs, tier, savings, nextTier, nextTierRemaining } = useCart()
+  const weightKg = Math.max(0.1, Math.round(cartWeight/100)/10)
   const navigate = useNavigate()
 
   const [step, setStep] = useState('cart')
@@ -50,10 +31,7 @@ export default function CartCheckout() {
   })
   const [formErrors, setFormErrors] = useState({})
 
-  const selectedZone = form.customer_province ? PROVINCE_ZONE[form.customer_province] || 'zona2' : null
-  const shippingCost = selectedZone ? calcShipping(selectedZone, cartWeight) : 0
-  const grandTotal = cartTotal + shippingCost
-  const zoneInfo = ZONES.find(z => z.value === selectedZone)
+  const grandTotal = cartTotal
 
   const updateForm = (key, val) => {
     setForm(p => ({ ...p, [key]: val }))
@@ -77,12 +55,10 @@ export default function CartCheckout() {
     try {
       const orderData = {
         ...form,
-        zone: selectedZone,
-        items: cartItems.map(i => ({
-          name: i.product.name, color: i.color, size: i.size,
-          qty: i.qty, price: i.product.price,
-        })),
-        subtotal: cartTotal, shipping_cost: shippingCost, total: grandTotal,
+        zone: 'konfirmasi',
+        items: cartItems.map(i => ({ name: i.product.name, color: 'Semua warna', size: '-', qty: i.qty, series_qty: i.pcsPerSeries, pcs: i.pcs, price: i.unit })),
+        tier, total_pcs: cartPcs, est_weight_kg: weightKg,
+        subtotal: cartTotal, shipping_cost: 0, total: grandTotal,
       }
       const order = await createOrder(orderData)
       setOrderResult(order)
@@ -94,9 +70,10 @@ export default function CartCheckout() {
       const fallbackOrder = {
         ...form,
         order_code: `HC-${Date.now().toString().slice(-6)}`,
-        zone: selectedZone,
-        items: cartItems.map(i => ({ name:i.product.name, color:i.color, size:i.size, qty:i.qty, price:i.product.price })),
-        subtotal: cartTotal, shipping_cost: shippingCost, total: grandTotal,
+        zone: 'konfirmasi',
+        items: cartItems.map(i => ({ name: i.product.name, color: 'Semua warna', size: '-', qty: i.qty, series_qty: i.pcsPerSeries, pcs: i.pcs, price: i.unit })),
+        tier, total_pcs: cartPcs, est_weight_kg: weightKg,
+        subtotal: cartTotal, shipping_cost: 0, total: grandTotal,
       }
       const msg = buildWhatsAppMessage(fallbackOrder)
       window.open(`https://wa.me/${WA_NUMBER}?text=${msg}`, '_blank')
@@ -110,10 +87,10 @@ export default function CartCheckout() {
   if (cartItems.length === 0 && step !== 'success') return (
     <div style={{ fontFamily:sans, paddingTop:72, minHeight:'80vh', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:20, textAlign:'center', padding:'72px 24px' }}>
       <div style={{ fontSize:64 }}>🛒</div>
-      <h2 style={{ fontSize:28, fontWeight:400, fontFamily:serif, color:D }}>Keranjang <span style={{ fontStyle:'italic', color:G }}>Kosong</span></h2>
-      <p style={{ fontSize:13, color:'#9A8060', maxWidth:300 }}>Belum ada produk di keranjangmu. Yuk mulai belanja!</p>
-      <Link to="/shop" style={{ padding:'13px 32px', background:`linear-gradient(135deg,${G},#D4AA50)`, color:C, borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', textDecoration:'none', fontFamily:sans, boxShadow:'0 6px 20px rgba(193,152,60,0.3)' }}>
-        Shop Now →
+      <h2 style={{ fontSize:28, fontWeight:400, fontFamily:serif, color:D }}>Keranjang Order <span style={{ fontStyle:'italic', color:G }}>Kosong</span></h2>
+      <p style={{ fontSize:13, color:'#8A8680', maxWidth:300 }}>Belum ada model di keranjang. Pilih model dari katalog grosir.</p>
+      <Link to="/shop" style={{ padding:'13px 32px', background:`linear-gradient(135deg,${G},#CDB07A)`, color:C, borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', textDecoration:'none', fontFamily:sans, boxShadow:'0 6px 20px rgba(184,151,90,0.3)' }}>
+        Lihat Katalog →
       </Link>
     </div>
   )
@@ -123,22 +100,22 @@ export default function CartCheckout() {
     <div style={{ fontFamily:sans, paddingTop:72, minHeight:'80vh', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:20, textAlign:'center', padding:'72px 24px' }}>
       <div style={{ fontSize:64 }}>🎉</div>
       <h2 style={{ fontSize:32, fontWeight:400, fontFamily:serif, color:D }}>Pesanan <span style={{ fontStyle:'italic', color:G }}>Terkirim!</span></h2>
-      {orderResult && <div style={{ fontSize:14, color:G, fontWeight:700, background:LB, padding:'8px 20px', borderRadius:20, border:`1px solid rgba(193,152,60,0.2)` }}>Kode: {orderResult.order_code}</div>}
-      <p style={{ fontSize:13, color:'#7A6040', maxWidth:400, lineHeight:1.8 }}>
-        WhatsApp sudah terbuka otomatis dengan detail pesananmu. Silakan kirim pesan tersebut ke kami untuk konfirmasi.
+      {orderResult && <div style={{ fontSize:14, color:G, fontWeight:700, background:LB, padding:'8px 20px', borderRadius:20, border:`1px solid rgba(184,151,90,0.2)` }}>Kode: {orderResult.order_code}</div>}
+      <p style={{ fontSize:13, color:'#6B6862', maxWidth:400, lineHeight:1.8 }}>
+        WhatsApp sudah terbuka dengan detail order. Kirim pesan tersebut, lalu kami konfirmasi ongkir dan total akhir.
       </p>
-      <div style={{ background:LB, border:`1px solid rgba(193,152,60,0.2)`, borderRadius:8, padding:'20px 28px', maxWidth:360, width:'100%' }}>
+      <div style={{ background:LB, border:`1px solid rgba(184,151,90,0.2)`, borderRadius:8, padding:'20px 28px', maxWidth:360, width:'100%' }}>
         <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G, marginBottom:12 }}>Info Pembayaran</div>
         <div style={{ fontSize:13, color:D, lineHeight:2 }}>
           <div>🏦 Transfer BCA</div>
           <div style={{ fontSize:18, fontWeight:700, fontFamily:serif, letterSpacing:'0.1em' }}>7560515655</div>
-          <div style={{ fontSize:11, color:'#9A8060' }}>a/n Weta Novinie</div>
-          <div style={{ marginTop:8, fontSize:16, fontWeight:700, color:G }}>Total: Rp {(orderResult?.total||grandTotal).toLocaleString('id-ID')}</div>
+          <div style={{ fontSize:11, color:'#8A8680' }}>a/n Weta Novinie</div>
+          <div style={{ marginTop:8, fontSize:16, fontWeight:700, color:G }}>Total (belum ongkir): {rp(orderResult?.total||grandTotal)}</div>
         </div>
       </div>
       <div style={{ display:'flex', gap:12, flexWrap:'wrap', justifyContent:'center' }}>
-        <Link to="/shop" style={{ padding:'12px 28px', background:`linear-gradient(135deg,${G},#D4AA50)`, color:C, borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', textDecoration:'none', fontFamily:sans }}>Lanjut Belanja</Link>
-        <Link to="/" style={{ padding:'12px 28px', background:'transparent', color:D, border:`1px solid rgba(42,31,14,0.2)`, borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', textDecoration:'none', fontFamily:sans }}>Kembali ke Home</Link>
+        <Link to="/shop" style={{ padding:'12px 28px', background:`linear-gradient(135deg,${G},#CDB07A)`, color:C, borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', textDecoration:'none', fontFamily:sans }}>Tambah Model</Link>
+        <Link to="/" style={{ padding:'12px 28px', background:'transparent', color:D, border:`1px solid rgba(43,41,38,0.2)`, borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', textDecoration:'none', fontFamily:sans }}>Kembali ke Home</Link>
       </div>
     </div>
   )
@@ -146,21 +123,21 @@ export default function CartCheckout() {
   return (
     <div style={{ fontFamily:sans, paddingTop:72 }}>
       {/* HEADER */}
-      <div style={{ background:'linear-gradient(135deg,#F5EDD8,#EDE0C4)', padding:'32px 48px 24px', borderBottom:`1px solid rgba(193,152,60,0.15)` }}>
+      <div style={{ background:'linear-gradient(135deg,#F4F2EE,#EAE7E1)', padding:'32px 48px 24px', borderBottom:`1px solid rgba(184,151,90,0.15)` }}>
         <style>{`@media(max-width:768px){.cart-header-pad{padding:24px !important}}`}</style>
         <div style={{ fontSize:10, letterSpacing:'0.3em', textTransform:'uppercase', color:G, marginBottom:8 }}>✦ {step==='cart'?'Keranjang':'Checkout'}</div>
         <h1 style={{ fontSize:32, fontWeight:400, fontFamily:serif, color:D }}>
-          {step==='cart' ? <>Keranjang <span style={{ fontStyle:'italic', color:G }}>Belanja</span></> : <>Detail <span style={{ fontStyle:'italic', color:G }}>Pengiriman</span></>}
+          {step==='cart' ? <>Keranjang <span style={{ fontStyle:'italic', color:G }}>Order</span></> : <>Data <span style={{ fontStyle:'italic', color:G }}>Pemesan</span></>}
         </h1>
         {/* Steps indicator */}
         <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:16 }}>
           {['cart','checkout'].map((s,i) => (
             <React.Fragment key={s}>
               <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                <div style={{ width:24, height:24, borderRadius:'50%', background: step===s||(step==='checkout'&&s==='cart')?G:'rgba(193,152,60,0.2)', color: step===s||(step==='checkout'&&s==='cart')?C:'#9A8060', fontSize:11, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700 }}>{i+1}</div>
-                <span style={{ fontSize:11, color: step===s?D:'#9A8060', textTransform:'uppercase', letterSpacing:'0.1em' }}>{s==='cart'?'Keranjang':'Checkout'}</span>
+                <div style={{ width:24, height:24, borderRadius:'50%', background: step===s||(step==='checkout'&&s==='cart')?G:'rgba(184,151,90,0.2)', color: step===s||(step==='checkout'&&s==='cart')?C:'#8A8680', fontSize:11, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700 }}>{i+1}</div>
+                <span style={{ fontSize:11, color: step===s?D:'#8A8680', textTransform:'uppercase', letterSpacing:'0.1em' }}>{s==='cart'?'Keranjang':'Checkout'}</span>
               </div>
-              {i===0 && <div style={{ flex:1, height:1, background:'rgba(193,152,60,0.2)', maxWidth:40 }} />}
+              {i===0 && <div style={{ flex:1, height:1, background:'rgba(184,151,90,0.2)', maxWidth:40 }} />}
             </React.Fragment>
           ))}
         </div>
@@ -177,12 +154,11 @@ export default function CartCheckout() {
               <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
                 {cartItems.map(item => {
                   const thumb = item.product.images?.[0] || null
-                  const colorObj = item.product.color_images?.find(c => c.name === item.color)
-                  const colorThumb = colorObj?.image_url || thumb
+                  const colorThumb = thumb
                   return (
-                    <div key={item.key} style={{ background:C, borderRadius:4, border:`1px solid rgba(193,152,60,0.12)`, padding:'16px 20px', display:'flex', gap:16, alignItems:'center' }}>
+                    <div key={item.key} style={{ background:C, borderRadius:4, border:`1px solid rgba(184,151,90,0.12)`, padding:'16px 20px', display:'flex', gap:16, alignItems:'center' }}>
                       {/* Product thumbnail */}
-                      <div style={{ width:76, height:96, flexShrink:0, borderRadius:4, overflow:'hidden', background: colorThumb?'none':(item.product.bg||'linear-gradient(145deg,#F0E4C8,#E8D5A8)'), display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid rgba(193,152,60,0.1)' }}>
+                      <div style={{ width:76, height:96, flexShrink:0, borderRadius:4, overflow:'hidden', background: colorThumb?'none':(item.product.bg||'linear-gradient(145deg,#ECE9E4,#E2DED7)'), display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid rgba(184,151,90,0.1)' }}>
                         {colorThumb
                           ? <img src={colorThumb} alt={item.product.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                           : <span style={{ fontSize:28 }}>👗</span>
@@ -191,18 +167,18 @@ export default function CartCheckout() {
                       {/* Info */}
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ fontSize:14, fontWeight:500, fontFamily:serif, color:D, marginBottom:2 }}>{item.product.name}</div>
-                        <div style={{ fontSize:10, color:'#9A8060', letterSpacing:'0.1em', marginBottom:2 }}>
-                          {item.color !== 'Default' && item.color} {item.color !== 'Default' && item.size !== 'One Size' && '·'} {item.size !== 'One Size' && item.size}
+                        <div style={{ fontSize:10, color:'#8A8680', letterSpacing:'0.1em', marginBottom:2 }}>
+                          {item.qty} seri × {item.pcsPerSeries} pcs = {item.pcs} pcs · semua warna
                         </div>
-                        <div style={{ fontSize:11, color:'#9A8060', marginBottom:8 }}>⚖️ {item.product.weight||300}g / pcs</div>
-                        <div style={{ fontSize:14, fontWeight:600, fontFamily:serif, color:D }}>
-                          Rp {(item.product.price * item.qty).toLocaleString('id-ID')}
+                        <div style={{ fontSize:11, color:'#8A8680', marginBottom:8 }}>
+                          {rp(item.unit)} /pcs {item.unit < item.normalUnit && <span style={{ textDecoration:'line-through', marginLeft:4 }}>{rp(item.normalUnit)}</span>}
                         </div>
+                        <div style={{ fontSize:14, fontWeight:600, fontFamily:serif, color:D }}>{rp(item.subtotal)}</div>
                       </div>
                       {/* Qty */}
-                      <div style={{ display:'flex', alignItems:'center', border:`1px solid rgba(193,152,60,0.2)`, borderRadius:4, overflow:'hidden', flexShrink:0 }}>
+                      <div style={{ display:'flex', alignItems:'center', border:`1px solid rgba(184,151,90,0.2)`, borderRadius:4, overflow:'hidden', flexShrink:0 }}>
                         <button onClick={() => updateQty(item.key,-1)} style={{ width:32, height:32, border:'none', background:LB, cursor:'pointer', fontSize:16, color:D }}>−</button>
-                        <span style={{ width:36, height:32, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:600, color:D, borderLeft:`1px solid rgba(193,152,60,0.15)`, borderRight:`1px solid rgba(193,152,60,0.15)` }}>{item.qty}</span>
+                        <span style={{ width:36, height:32, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:600, color:D, borderLeft:`1px solid rgba(184,151,90,0.15)`, borderRight:`1px solid rgba(184,151,90,0.15)` }}>{item.qty}</span>
                         <button onClick={() => updateQty(item.key,1)} style={{ width:32, height:32, border:'none', background:LB, cursor:'pointer', fontSize:16, color:D }}>+</button>
                       </div>
                       <button onClick={() => removeFromCart(item.key)} style={{ background:'none', border:'none', cursor:'pointer', color:'#C0A0A0', fontSize:18, flexShrink:0, padding:4 }}>🗑️</button>
@@ -211,23 +187,19 @@ export default function CartCheckout() {
                 })}
               </div>
 
-              {/* Shipping info */}
-              <div style={{ background:LB, borderRadius:4, padding:'16px 20px', marginTop:20, border:`1px solid rgba(193,152,60,0.12)` }}>
-                <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G, marginBottom:12 }}>Info Ongkir</div>
-                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                  {SHIPPING_DISPLAY.map(s => (
-                    <div key={s.zone} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:12 }}>
-                      <div>
-                        <span style={{ fontWeight:600, color:D }}>{s.zone}</span>
-                        <span style={{ color:'#9A8060', marginLeft:6 }}>— {s.area}</span>
-                      </div>
-                      <span style={{ fontWeight:600, color: s.free?'#6B9B6B':D, flexShrink:0, marginLeft:8 }}>{s.rate}</span>
-                    </div>
-                  ))}
-                </div>
+              {/* Tier banner */}
+              <div style={{ background:LB, borderRadius:4, padding:'16px 20px', marginTop:20, border:`1px solid rgba(184,151,90,0.25)` }}>
+                <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G, marginBottom:8 }}>Harga Tier {tier} aktif</div>
+                {nextTier ? (
+                  <div style={{ fontSize:12, color:'#55524D', lineHeight:1.7 }}>Tambah belanja <b>{rp(nextTierRemaining)}</b> lagi untuk harga <b>Tier {nextTier}</b> (di atas {rp(nextTier===2?TIER2_MIN:TIER3_MIN)}).</div>
+                ) : (
+                  <div style={{ fontSize:12, color:'#55524D' }}>Anda sudah mendapat harga terendah (Tier 3) 🎉</div>
+                )}
+                {savings > 0 && <div style={{ fontSize:12, color:'#4F7F4F', marginTop:6, fontWeight:700 }}>Hemat {rp(savings)} dari harga normal</div>}
+                <div style={{ fontSize:11, color:'#8A8680', marginTop:8 }}>Ongkir tidak dihitung di sini; kami konfirmasi terpisah via WhatsApp.</div>
               </div>
 
-              <button onClick={() => setStep('checkout')} style={{ width:'100%', marginTop:20, padding:'14px', background:`linear-gradient(135deg,${G},#D4AA50,${G})`, color:C, border:'none', borderRadius:2, fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans, boxShadow:'0 6px 20px rgba(193,152,60,0.3)' }}>
+              <button onClick={() => setStep('checkout')} style={{ width:'100%', marginTop:20, padding:'14px', background:`linear-gradient(135deg,${G},#CDB07A,${G})`, color:C, border:'none', borderRadius:2, fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans, boxShadow:'0 6px 20px rgba(184,151,90,0.3)' }}>
                 Lanjut ke Checkout →
               </button>
             </div>
@@ -236,7 +208,7 @@ export default function CartCheckout() {
           {/* ── STEP 2: CHECKOUT FORM ── */}
           {step==='checkout' && (
             <div>
-              <button onClick={() => setStep('cart')} style={{ background:'none', border:'none', cursor:'pointer', color:'#9A8060', fontSize:12, fontFamily:sans, marginBottom:24, display:'flex', alignItems:'center', gap:6 }}>
+              <button onClick={() => setStep('cart')} style={{ background:'none', border:'none', cursor:'pointer', color:'#8A8680', fontSize:12, fontFamily:sans, marginBottom:24, display:'flex', alignItems:'center', gap:6 }}>
                 ← Kembali ke Keranjang
               </button>
 
@@ -271,38 +243,26 @@ export default function CartCheckout() {
                   {formErrors.customer_province && <div style={{ fontSize:10, color:'#DC2626', marginTop:4 }}>{formErrors.customer_province}</div>}
                 </div>
 
-                {/* Zone detected */}
-                {selectedZone && (
-                  <div style={{ gridColumn:'1/-1', background:LB, borderRadius:4, padding:'12px 16px', border:`1px solid rgba(193,152,60,0.15)` }}>
-                    <div style={{ fontSize:10, color:G, letterSpacing:'0.15em', textTransform:'uppercase', marginBottom:4 }}>Zona Pengiriman</div>
-                    <div style={{ fontSize:13, color:D, fontWeight:600 }}>{zoneInfo?.label}</div>
-                    <div style={{ fontSize:12, color:'#7A6040', marginTop:2 }}>
-                      Ongkir: {shippingCost===0 ? <span style={{ color:'#6B9B6B', fontWeight:700 }}>GRATIS 🎉</span> : `Rp ${shippingCost.toLocaleString('id-ID')}`}
-                      <span style={{ color:'#9A8060', marginLeft:6 }}>({Math.ceil(cartWeight/1000)} kg)</span>
-                    </div>
-                  </div>
-                )}
-
                 <div style={{ gridColumn:'1/-1' }}>
                   <label className="form-label">Catatan (opsional)</label>
-                  <textarea value={form.notes} onChange={e=>updateForm('notes',e.target.value)} className="form-input" placeholder="Instruksi khusus, warna alternatif, dll." rows={2} style={{ resize:'vertical' }} />
+                  <textarea value={form.notes} onChange={e=>updateForm('notes',e.target.value)} className="form-input" placeholder="Catatan untuk kami, ekspedisi yang diinginkan, dll." rows={2} style={{ resize:'vertical' }} />
                 </div>
               </div>
 
               {/* Payment info */}
-              <div style={{ background:'linear-gradient(135deg,#F0E4C8,#E8D5A8)', borderRadius:4, padding:'20px', marginTop:20, border:`1px solid rgba(193,152,60,0.2)` }}>
-                <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:'#9A6E1A', marginBottom:12 }}>✦ Cara Pembayaran</div>
+              <div style={{ background:'linear-gradient(135deg,#ECE9E4,#E2DED7)', borderRadius:4, padding:'20px', marginTop:20, border:`1px solid rgba(184,151,90,0.2)` }}>
+                <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:'#8A6D35', marginBottom:12 }}>✦ Cara Pembayaran</div>
                 <div style={{ fontSize:13, color:D, lineHeight:2 }}>
                   <div>Transfer ke rekening BCA:</div>
                   <div style={{ fontSize:22, fontWeight:700, fontFamily:serif, letterSpacing:'0.08em' }}>7560515655</div>
-                  <div style={{ fontSize:12, color:'#7A6040' }}>a/n Weta Novinie</div>
-                  <div style={{ marginTop:8, fontSize:12, color:'#7A6040' }}>Setelah klik "Pesan via WhatsApp", kirim pesan tersebut beserta bukti transfer.</div>
+                  <div style={{ fontSize:12, color:'#6B6862' }}>a/n Weta Novinie</div>
+                  <div style={{ marginTop:8, fontSize:12, color:'#6B6862' }}>Pembayaran dilakukan setelah total + ongkir kami konfirmasi via WhatsApp.</div>
                 </div>
               </div>
 
               <button onClick={handleOrder} disabled={submitting}
-                style={{ width:'100%', marginTop:20, padding:'16px', background: submitting?'#C0A88A':`linear-gradient(135deg,${G},#D4AA50,${G})`, color:C, border:'none', borderRadius:2, fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor: submitting?'not-allowed':'pointer', fontFamily:sans, boxShadow:'0 6px 20px rgba(193,152,60,0.3)', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-                {submitting ? <><div style={{ width:16, height:16, border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid white', borderRadius:'50%', animation:'spin 1s linear infinite' }} />Memproses...</> : '📱 Pesan via WhatsApp'}
+                style={{ width:'100%', marginTop:20, padding:'16px', background: submitting?'#C0A88A':`linear-gradient(135deg,${G},#CDB07A,${G})`, color:C, border:'none', borderRadius:2, fontSize:12, letterSpacing:'0.2em', textTransform:'uppercase', cursor: submitting?'not-allowed':'pointer', fontFamily:sans, boxShadow:'0 6px 20px rgba(184,151,90,0.3)', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                {submitting ? <><div style={{ width:16, height:16, border:'2px solid rgba(255,255,255,0.3)', borderTop:'2px solid white', borderRadius:'50%', animation:'spin 1s linear infinite' }} />Memproses...</> : '📱 Kirim Order via WhatsApp'}
               </button>
             </div>
           )}
@@ -310,19 +270,18 @@ export default function CartCheckout() {
 
         {/* RIGHT — ORDER SUMMARY */}
         <div>
-          <div style={{ background:C, borderRadius:4, border:`1px solid rgba(193,152,60,0.12)`, overflow:'hidden', position:'sticky', top:96 }}>
-            <div style={{ padding:'16px 20px', borderBottom:`1px solid rgba(193,152,60,0.1)`, fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G }}>
+          <div style={{ background:C, borderRadius:4, border:`1px solid rgba(184,151,90,0.12)`, overflow:'hidden', position:'sticky', top:96 }}>
+            <div style={{ padding:'16px 20px', borderBottom:`1px solid rgba(184,151,90,0.1)`, fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G }}>
               Ringkasan Order
             </div>
             <div style={{ padding:'16px 20px' }}>
               {cartItems.map(item => {
                 const thumb = item.product.images?.[0] || null
-                const colorObj = item.product.color_images?.find(c => c.name === item.color)
-                const colorThumb = colorObj?.image_url || thumb
+                const colorThumb = thumb
                 return (
                   <div key={item.key} style={{ display:'flex', gap:10, marginBottom:12, alignItems:'center' }}>
                     {/* Thumbnail */}
-                    <div style={{ width:44, height:56, flexShrink:0, borderRadius:3, overflow:'hidden', background: colorThumb?'none':(item.product.bg||'linear-gradient(145deg,#F0E4C8,#E8D5A8)'), display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid rgba(193,152,60,0.1)' }}>
+                    <div style={{ width:44, height:56, flexShrink:0, borderRadius:3, overflow:'hidden', background: colorThumb?'none':(item.product.bg||'linear-gradient(145deg,#ECE9E4,#E2DED7)'), display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid rgba(184,151,90,0.1)' }}>
                       {colorThumb
                         ? <img src={colorThumb} alt={item.product.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                         : <span style={{ fontSize:16 }}>👗</span>
@@ -330,36 +289,35 @@ export default function CartCheckout() {
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:12, color:D, fontWeight:500 }}>{item.product.name}</div>
-                      <div style={{ fontSize:10, color:'#9A8060' }}>
-                        {item.color !== 'Default' && item.color} {item.size !== 'One Size' && `· ${item.size}`} · x{item.qty}
+                      <div style={{ fontSize:10, color:'#8A8680' }}>
+                        {item.qty} seri · {item.pcs} pcs
                       </div>
                     </div>
                     <div style={{ fontSize:12, color:D, fontWeight:600, flexShrink:0 }}>
-                      Rp {(item.product.price * item.qty).toLocaleString('id-ID')}
+                      {rp(item.subtotal)}
                     </div>
                   </div>
                 )
               })}
 
-              <div style={{ borderTop:`1px solid rgba(193,152,60,0.1)`, paddingTop:12, marginTop:4, display:'flex', flexDirection:'column', gap:8 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'#7A6040' }}>
-                  <span>Subtotal</span>
-                  <span>Rp {cartTotal.toLocaleString('id-ID')}</span>
+              <div style={{ borderTop:`1px solid rgba(184,151,90,0.1)`, paddingTop:12, marginTop:4, display:'flex', flexDirection:'column', gap:8 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'#6B6862' }}>
+                  <span>Total pcs</span><span>{cartPcs} pcs</span>
                 </div>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'#7A6040' }}>
-                  <span>Ongkir {zoneInfo?`(${zoneInfo.label.split('—')[0].trim()})`:''}</span>
-                  <span style={{ color: shippingCost===0&&selectedZone?'#6B9B6B':'#7A6040', fontWeight: shippingCost===0&&selectedZone?700:400 }}>
-                    {!selectedZone ? '—' : shippingCost===0 ? 'GRATIS' : `Rp ${shippingCost.toLocaleString('id-ID')}`}
-                  </span>
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'#6B6862' }}>
+                  <span>Harga</span><span style={{ color:G, fontWeight:700 }}>Tier {tier}</span>
                 </div>
-                <div style={{ display:'flex', justifyContent:'space-between', fontSize:15, color:D, fontWeight:700, fontFamily:serif, paddingTop:8, borderTop:`1px solid rgba(193,152,60,0.1)` }}>
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'#6B6862' }}>
+                  <span>Ongkir</span><span>Dikonfirmasi terpisah</span>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', fontSize:15, color:D, fontWeight:700, fontFamily:serif, paddingTop:8, borderTop:`1px solid rgba(184,151,90,0.1)` }}>
                   <span>Total</span>
-                  <span style={{ color:G }}>Rp {grandTotal.toLocaleString('id-ID')}</span>
+                  <span style={{ color:G }}>{rp(grandTotal)}</span>
                 </div>
               </div>
 
-              <div style={{ marginTop:12, fontSize:10, color:'#9A8060', textAlign:'center' }}>
-                ⚖️ Total berat: {cartWeight}g ({Math.ceil(cartWeight/1000)} kg)
+              <div style={{ marginTop:12, fontSize:10, color:'#8A8680', textAlign:'center' }}>
+                ⚖️ Estimasi total berat: ± {weightKg} kg
               </div>
             </div>
           </div>

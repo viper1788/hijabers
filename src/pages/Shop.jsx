@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getAllProducts } from '../lib/api.js'
 import { products as localProducts, CATEGORIES } from '../data/products.js'
+import { rp, seriesQty, unitPrice } from '../lib/pricing.js'
 
-const G = "#C1983C", D = "#2A1F0E", C = "#FDFBF7", LB = "#F7F2E8"
+const G = "#B8975A", D = "#2B2926", C = "#FAFAF8", LB = "#F2F0EC"
 const serif = "'Cormorant Garamond',serif"
 const sans = "'Didact Gothic',sans-serif"
 
@@ -38,7 +39,7 @@ function ProductCard({ product }) {
       onMouseLeave={() => setHovered(false)}>
       <div style={{ transform: hovered ? 'translateY(-5px)' : 'none', transition:'transform 0.3s' }}>
         {/* Product image */}
-        <div className="prod-img" style={{ borderRadius:4, background: thumb ? 'none' : (product.bg||'linear-gradient(145deg,#F0E4C8,#E8D5A8)'), display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden', marginBottom:12, border:'1px solid rgba(193,152,60,0.15)', boxShadow: hovered ? '0 12px 40px rgba(193,152,60,0.2)' : '0 4px 16px rgba(42,31,14,0.06)', transition:'box-shadow 0.3s' }}>
+        <div className="prod-img" style={{ borderRadius:4, background: thumb ? 'none' : (product.bg||'linear-gradient(145deg,#ECE9E4,#E2DED7)'), display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden', marginBottom:12, border:'1px solid rgba(184,151,90,0.15)', boxShadow: hovered ? '0 12px 40px rgba(184,151,90,0.2)' : '0 4px 16px rgba(43,41,38,0.06)', transition:'box-shadow 0.3s' }}>
           {thumb
             ? <img src={thumb} alt={product.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
             : <>
@@ -47,7 +48,7 @@ function ProductCard({ product }) {
               </>
           }
           {product.badge && (
-            <div style={{ position:'absolute', top:10, left:10, background:`linear-gradient(135deg,${G},#D4AA50)`, color:C, fontSize:8, letterSpacing:'0.2em', textTransform:'uppercase', padding:'3px 8px', fontFamily:sans }}>
+            <div style={{ position:'absolute', top:10, left:10, background:`linear-gradient(135deg,${G},#CDB07A)`, color:C, fontSize:8, letterSpacing:'0.2em', textTransform:'uppercase', padding:'3px 8px', fontFamily:sans }}>
               {product.badge}
             </div>
           )}
@@ -57,7 +58,7 @@ function ProductCard({ product }) {
               {colorList.slice(0,6).map(c => (
                 <div key={c.name} title={c.name} style={{ width:9, height:9, borderRadius:'50%', background:c.hex||COLORS_MAP[c.name]||'#ccc', border:'1.5px solid rgba(255,255,255,0.8)' }} />
               ))}
-              {colorList.length > 6 && <div style={{ fontSize:8, color:C, background:'rgba(42,31,14,0.4)', borderRadius:10, padding:'0 4px', display:'flex', alignItems:'center' }}>+{colorList.length-6}</div>}
+              {colorList.length > 6 && <div style={{ fontSize:8, color:C, background:'rgba(43,41,38,0.4)', borderRadius:10, padding:'0 4px', display:'flex', alignItems:'center' }}>+{colorList.length-6}</div>}
             </div>
           )}
         </div>
@@ -65,17 +66,13 @@ function ProductCard({ product }) {
         <div style={{ fontSize:14, fontWeight:500, fontFamily:serif, color:D, marginBottom:2 }}>{product.name}</div>
         <div style={{ fontSize:9, color:G, letterSpacing:'0.18em', textTransform:'uppercase', fontFamily:sans, marginBottom:8 }}>{product.category}</div>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-          <span style={{ fontSize:14, fontWeight:600, fontFamily:serif, color:D }}>Rp {(product.price||0).toLocaleString('id-ID')}</span>
+          <span style={{ fontSize:14, fontWeight:600, fontFamily:serif, color:D }}>{rp(unitPrice(product,1))}<span style={{ fontSize:10, color:'#8A8680', fontWeight:400 }}> /pcs</span></span>
           <span style={{ fontSize:9, color:G, borderBottom:`1px solid ${G}`, paddingBottom:1 }}>Lihat →</span>
         </div>
-        {/* Size pills */}
-        {Array.isArray(product.sizes) && product.sizes.length > 0 && (
-          <div style={{ display:'flex', gap:3, marginTop:6, flexWrap:'wrap' }}>
-            {product.sizes.map(s => (
-              <span key={s} style={{ fontSize:8, padding:'2px 6px', border:'1px solid rgba(193,152,60,0.2)', borderRadius:2, color:'#7A6040', fontFamily:sans }}>{s}</span>
-            ))}
-          </div>
-        )}
+        <div style={{ display:'flex', gap:6, marginTop:6, flexWrap:'wrap' }}>
+          <span style={{ fontSize:9, padding:'2px 8px', border:'1px solid rgba(184,151,90,0.35)', borderRadius:2, color:G, fontFamily:sans }}>1 seri = {seriesQty(product)} pcs</span>
+          {unitPrice(product,3) < unitPrice(product,1) && <span style={{ fontSize:9, padding:'2px 8px', borderRadius:2, background:LB, color:'#6B6862', fontFamily:sans }}>s/d {rp(unitPrice(product,3))}</span>}
+        </div>
       </div>
     </Link>
   )
@@ -124,8 +121,8 @@ export default function Shop() {
     .filter(p => activeCategory === 'Semua' || p.category === activeCategory)
     .filter(p => !search || p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase()))
     .sort((a,b) => {
-      if (sort === 'price-asc') return a.price - b.price
-      if (sort === 'price-desc') return b.price - a.price
+      if (sort === 'price-asc') return unitPrice(a,1) - unitPrice(b,1)
+      if (sort === 'price-desc') return unitPrice(b,1) - unitPrice(a,1)
       if (sort === 'name-asc') return a.name.localeCompare(b.name)
       return 0
     })
@@ -137,26 +134,26 @@ export default function Shop() {
     <div style={{ fontFamily:sans, paddingTop:72 }}>
 
       {/* HEADER */}
-      <div style={{ background:'linear-gradient(135deg,#F5EDD8,#EDE0C4)', padding:'40px 48px 32px', borderBottom:`1px solid rgba(193,152,60,0.15)` }}>
+      <div style={{ background:'linear-gradient(135deg,#F4F2EE,#EAE7E1)', padding:'40px 48px 32px', borderBottom:`1px solid rgba(184,151,90,0.15)` }}>
         <style>{`@media(max-width:768px){.shop-header{padding:28px 24px 20px !important}}`}</style>
-        <div style={{ fontSize:10, letterSpacing:'0.3em', textTransform:'uppercase', color:G, marginBottom:8 }}>✦ Koleksi</div>
+        <div style={{ fontSize:10, letterSpacing:'0.3em', textTransform:'uppercase', color:G, marginBottom:8 }}>✦ Katalog Grosir</div>
         <h1 style={{ fontSize:36, fontWeight:400, fontFamily:serif, color:D, marginBottom:8 }}>
-          {activeCategory === 'Semua' ? <>Semua <span style={{ fontStyle:'italic', color:G }}>Koleksi</span></> : <span style={{ fontStyle:'italic', color:G }}>{activeCategory}</span>}
+          {activeCategory === 'Semua' ? <>Katalog <span style={{ fontStyle:'italic', color:G }}>Grosir</span></> : <span style={{ fontStyle:'italic', color:G }}>{activeCategory}</span>}
         </h1>
-        <p style={{ fontSize:13, color:'#7A6040', fontWeight:300 }}>
-          {filtered.length} produk {activeCategory !== 'Semua' && `dalam kategori ${activeCategory}`}
+        <p style={{ fontSize:13, color:'#6B6862', fontWeight:300 }}>
+          {filtered.length} model · order per seri (semua warna) · harga per pcs {activeCategory !== 'Semua' && `dalam kategori ${activeCategory}`}
         </p>
       </div>
 
       {/* SEARCH + SORT */}
-      <div style={{ padding:'14px 48px', background:C, borderBottom:`1px solid rgba(193,152,60,0.1)`, display:'flex', gap:12, alignItems:'center', flexWrap:'wrap' }}>
+      <div style={{ padding:'14px 48px', background:C, borderBottom:`1px solid rgba(184,151,90,0.1)`, display:'flex', gap:12, alignItems:'center', flexWrap:'wrap' }}>
         <style>{`@media(max-width:768px){.search-sort-bar{padding:12px 24px !important}}`}</style>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Cari produk..." className="form-input" style={{ flex:1, minWidth:180, padding:'10px 14px' }} />
         <select value={sort} onChange={e=>setSort(e.target.value)} className="form-input" style={{ width:'auto', padding:'10px 14px', cursor:'pointer' }}>
           {SORT_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         <button onClick={()=>setMobileFilterOpen(!mobileFilterOpen)}
-          style={{ display:'none', padding:'10px 16px', background:LB, border:`1px solid rgba(193,152,60,0.2)`, borderRadius:4, cursor:'pointer', fontSize:11, fontFamily:sans, color:D }}
+          style={{ display:'none', padding:'10px 16px', background:LB, border:`1px solid rgba(184,151,90,0.2)`, borderRadius:4, cursor:'pointer', fontSize:11, fontFamily:sans, color:D }}
           className="mobile-filter-btn">
           🗂️ Kategori
         </button>
@@ -165,10 +162,10 @@ export default function Shop() {
 
       {/* MOBILE FILTER */}
       {mobileFilterOpen && (
-        <div style={{ background:C, borderBottom:`1px solid rgba(193,152,60,0.1)`, padding:'12px 24px', display:'flex', gap:8, flexWrap:'wrap' }}>
+        <div style={{ background:C, borderBottom:`1px solid rgba(184,151,90,0.1)`, padding:'12px 24px', display:'flex', gap:8, flexWrap:'wrap' }}>
           {['Semua', ...activeCategories].map(cat => (
             <button key={cat} onClick={()=>setCategory(cat)}
-              style={{ padding:'6px 14px', borderRadius:20, border:'1px solid', borderColor: activeCategory===cat?D:'rgba(193,152,60,0.2)', background: activeCategory===cat?D:'transparent', color: activeCategory===cat?C:D, fontSize:11, cursor:'pointer', fontFamily:sans }}>
+              style={{ padding:'6px 14px', borderRadius:20, border:'1px solid', borderColor: activeCategory===cat?D:'rgba(184,151,90,0.2)', background: activeCategory===cat?D:'transparent', color: activeCategory===cat?C:D, fontSize:11, cursor:'pointer', fontFamily:sans }}>
               {cat}
             </button>
           ))}
@@ -178,11 +175,11 @@ export default function Shop() {
       <div className="shop-layout">
         {/* SIDEBAR */}
         <aside className="filter-sidebar">
-          <div style={{ background:C, borderRadius:4, border:`1px solid rgba(193,152,60,0.12)`, overflow:'hidden' }}>
-            <div style={{ padding:'14px 18px', borderBottom:`1px solid rgba(193,152,60,0.1)`, fontSize:9, letterSpacing:'0.25em', textTransform:'uppercase', color:G, fontFamily:sans }}>Kategori</div>
+          <div style={{ background:C, borderRadius:4, border:`1px solid rgba(184,151,90,0.12)`, overflow:'hidden' }}>
+            <div style={{ padding:'14px 18px', borderBottom:`1px solid rgba(184,151,90,0.1)`, fontSize:9, letterSpacing:'0.25em', textTransform:'uppercase', color:G, fontFamily:sans }}>Kategori</div>
             {['Semua', ...activeCategories].map(cat => (
               <button key={cat} onClick={()=>setCategory(cat)}
-                style={{ width:'100%', textAlign:'left', padding:'11px 18px', border:'none', borderBottom:`1px solid rgba(193,152,60,0.06)`, background: activeCategory===cat?`linear-gradient(135deg,rgba(193,152,60,0.08),rgba(193,152,60,0.04))`:'transparent', color: activeCategory===cat?G:'#5C4A2A', fontSize:12, cursor:'pointer', fontFamily:sans, transition:'all 0.2s', fontWeight: activeCategory===cat?700:400, borderLeft: activeCategory===cat?`2px solid ${G}`:'2px solid transparent', display:'flex', alignItems:'center', gap:10 }}>
+                style={{ width:'100%', textAlign:'left', padding:'11px 18px', border:'none', borderBottom:`1px solid rgba(184,151,90,0.06)`, background: activeCategory===cat?`linear-gradient(135deg,rgba(184,151,90,0.08),rgba(184,151,90,0.04))`:'transparent', color: activeCategory===cat?G:'#55524D', fontSize:12, cursor:'pointer', fontFamily:sans, transition:'all 0.2s', fontWeight: activeCategory===cat?700:400, borderLeft: activeCategory===cat?`2px solid ${G}`:'2px solid transparent', display:'flex', alignItems:'center', gap:10 }}>
                 {/* Category thumbnail in sidebar */}
                 {cat !== 'Semua' && categoryImages[cat] ? (
                   <img src={categoryImages[cat]} alt={cat} style={{ width:28, height:28, objectFit:'cover', borderRadius:3, flexShrink:0 }} />
@@ -199,11 +196,11 @@ export default function Shop() {
         <div>
           {loading ? (
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:300, flexDirection:'column', gap:16 }}>
-              <div style={{ width:32, height:32, border:`3px solid rgba(193,152,60,0.2)`, borderTop:`3px solid ${G}`, borderRadius:'50%', animation:'spin 1s linear infinite' }} />
-              <span style={{ fontSize:12, color:'#9A8060' }}>Memuat produk...</span>
+              <div style={{ width:32, height:32, border:`3px solid rgba(184,151,90,0.2)`, borderTop:`3px solid ${G}`, borderRadius:'50%', animation:'spin 1s linear infinite' }} />
+              <span style={{ fontSize:12, color:'#8A8680' }}>Memuat produk...</span>
             </div>
           ) : filtered.length === 0 ? (
-            <div style={{ textAlign:'center', padding:'64px 24px', color:'#9A8060' }}>
+            <div style={{ textAlign:'center', padding:'64px 24px', color:'#8A8680' }}>
               <div style={{ fontSize:48, marginBottom:16 }}>🔍</div>
               <p style={{ fontSize:14, fontFamily:serif, fontStyle:'italic' }}>Produk tidak ditemukan</p>
               <button onClick={()=>{setSearch('');setCategory('Semua')}}

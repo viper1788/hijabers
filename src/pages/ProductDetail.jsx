@@ -3,21 +3,21 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { getProductBySlug } from '../lib/api.js'
 import { getBySlug, getRelated as getRelatedLocal } from '../data/products.js'
 import { useCart } from '../context/CartContext.jsx'
+import { rp, seriesQty, unitPrice, TIER2_MIN, TIER3_MIN } from '../lib/pricing.js'
 
-const G = "#C1983C", D = "#2A1F0E", C = "#FDFBF7", LB = "#F7F2E8"
+const G = "#B8975A", D = "#2B2926", C = "#FAFAF8", LB = "#F2F0EC"
 const serif = "'Cormorant Garamond',serif"
 const sans = "'Didact Gothic',sans-serif"
 
 export default function ProductDetail() {
   const { slug } = useParams()
   const navigate = useNavigate()
-  const { addToCart } = useCart()
+  const { addToCart, tier: cartTier } = useCart()
 
   const [product, setProduct] = useState(null)
   const [related, setRelated] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedColor, setSelectedColor] = useState(null)
-  const [selectedSize, setSelectedSize] = useState(null)
   const [activeIndex, setActiveIndex] = useState(0)
   const [qty, setQty] = useState(1)
   const [toast, setToast] = useState(false)
@@ -34,8 +34,6 @@ export default function ProductDetail() {
       setProduct(p)
       const firstColor = p.color_images?.[0]?.name || (Array.isArray(p.colors) ? p.colors[0] : null)
       setSelectedColor(firstColor)
-      const sizes = Array.isArray(p.sizes) ? p.sizes : []
-      setSelectedSize(sizes[0] || null)
       setActiveIndex(0)
       try {
         const { getAllProducts } = await import('../lib/api.js')
@@ -47,7 +45,6 @@ export default function ProductDetail() {
       if (p) {
         setProduct(p)
         setSelectedColor((p.colors||[])[0]||null)
-        setSelectedSize((Array.isArray(p.sizes)?p.sizes:[])[0]||null)
         setRelated(getRelatedLocal(p))
       } else { setError('Produk tidak ditemukan') }
     } finally { setLoading(false) }
@@ -104,13 +101,13 @@ export default function ProductDetail() {
   }
 
   function handleAddToCart() {
-    addToCart(product, selectedColor||'Default', selectedSize||'One Size', qty)
+    addToCart(product, qty)
     setToast(true)
     setTimeout(() => setToast(false), 2500)
   }
 
   function handleBuyNow() {
-    addToCart(product, selectedColor||'Default', selectedSize||'One Size', qty)
+    addToCart(product, qty)
     navigate('/cart')
   }
 
@@ -118,13 +115,13 @@ export default function ProductDetail() {
     ? product.color_images.map(c => c.name)
     : (Array.isArray(product?.colors) ? product.colors : [])
 
-  const sizeList = Array.isArray(product?.sizes) ? product.sizes : []
+  const spp = product ? seriesQty(product) : 4
   const currentImage = allImages[activeIndex] || null
 
   if (loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'80vh', flexDirection:'column', gap:16 }}>
-      <div style={{ width:36, height:36, border:`3px solid rgba(193,152,60,0.2)`, borderTop:`3px solid ${G}`, borderRadius:'50%', animation:'spin 1s linear infinite' }} />
-      <span style={{ fontSize:12, color:'#9A8060', fontFamily:sans }}>Memuat produk...</span>
+      <div style={{ width:36, height:36, border:`3px solid rgba(184,151,90,0.2)`, borderTop:`3px solid ${G}`, borderRadius:'50%', animation:'spin 1s linear infinite' }} />
+      <span style={{ fontSize:12, color:'#8A8680', fontFamily:sans }}>Memuat produk...</span>
     </div>
   )
 
@@ -132,7 +129,7 @@ export default function ProductDetail() {
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'80vh', flexDirection:'column', gap:16, textAlign:'center' }}>
       <div style={{ fontSize:48 }}>🔍</div>
       <h2 style={{ fontFamily:serif, color:D, fontWeight:400 }}>{error}</h2>
-      <Link to="/shop" style={{ color:G, fontSize:12, borderBottom:`1px solid ${G}` }}>← Kembali ke Shop</Link>
+      <Link to="/shop" style={{ color:G, fontSize:12, borderBottom:`1px solid ${G}` }}>← Kembali ke Katalog</Link>
     </div>
   )
 
@@ -142,18 +139,18 @@ export default function ProductDetail() {
       {/* Toast */}
       {toast && (
         <div style={{ position:'fixed', top:88, right:24, zIndex:999, background:D, color:C, padding:'12px 20px', borderRadius:8, fontSize:12, boxShadow:'0 8px 32px rgba(0,0,0,0.15)', display:'flex', alignItems:'center', gap:8, animation:'fadeUp 0.3s ease' }}>
-          ✅ Ditambahkan ke keranjang!
+          ✅ Ditambahkan ke keranjang order!
         </div>
       )}
 
       {/* BREADCRUMB */}
-      <div style={{ padding:'14px 48px', borderBottom:`1px solid rgba(193,152,60,0.08)`, display:'flex', gap:8, alignItems:'center', fontSize:11, color:'#9A8060', flexWrap:'wrap' }}>
+      <div style={{ padding:'14px 48px', borderBottom:`1px solid rgba(184,151,90,0.08)`, display:'flex', gap:8, alignItems:'center', fontSize:11, color:'#8A8680', flexWrap:'wrap' }}>
         <style>{`@media(max-width:768px){.breadcrumb-bar{padding:10px 24px !important}}`}</style>
-        <Link to="/" style={{ color:'#9A8060', textDecoration:'none' }}>Home</Link>
+        <Link to="/" style={{ color:'#8A8680', textDecoration:'none' }}>Home</Link>
         <span>/</span>
-        <Link to="/shop" style={{ color:'#9A8060', textDecoration:'none' }}>Shop</Link>
+        <Link to="/shop" style={{ color:'#8A8680', textDecoration:'none' }}>Katalog</Link>
         <span>/</span>
-        <Link to={`/shop?category=${encodeURIComponent(product.category)}`} style={{ color:'#9A8060', textDecoration:'none' }}>{product.category}</Link>
+        <Link to={`/shop?category=${encodeURIComponent(product.category)}`} style={{ color:'#8A8680', textDecoration:'none' }}>{product.category}</Link>
         <span>/</span>
         <span style={{ color:D }}>{product.name}</span>
       </div>
@@ -171,18 +168,18 @@ export default function ProductDetail() {
         {/* LEFT — IMAGES */}
         <div>
           {/* Main image with nav arrows */}
-          <div style={{ aspectRatio:'3/4', background: currentImage ? 'none' : (product.bg||'linear-gradient(145deg,#F0E4C8,#E8D5A8)'), borderRadius:4, overflow:'hidden', marginBottom:10, border:'1px solid rgba(193,152,60,0.12)', boxShadow:'0 8px 40px rgba(42,31,14,0.08)', position:'relative' }}>
+          <div style={{ aspectRatio:'3/4', background: currentImage ? 'none' : (product.bg||'linear-gradient(145deg,#ECE9E4,#E2DED7)'), borderRadius:4, overflow:'hidden', marginBottom:10, border:'1px solid rgba(184,151,90,0.12)', boxShadow:'0 8px 40px rgba(43,41,38,0.08)', position:'relative' }}>
             {currentImage ? (
               <img src={currentImage} alt={product.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
             ) : (
               <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:8 }}>
                 <span style={{ fontSize:80 }}>👗</span>
-                <p style={{ fontSize:10, color:'rgba(42,31,14,0.3)', letterSpacing:'0.15em', textTransform:'uppercase' }}>Foto Produk</p>
+                <p style={{ fontSize:10, color:'rgba(43,41,38,0.3)', letterSpacing:'0.15em', textTransform:'uppercase' }}>Foto Produk</p>
               </div>
             )}
 
             {product.badge && (
-              <div style={{ position:'absolute', top:14, left:14, background:`linear-gradient(135deg,${G},#D4AA50)`, color:C, fontSize:9, letterSpacing:'0.2em', textTransform:'uppercase', padding:'4px 10px', fontFamily:sans }}>
+              <div style={{ position:'absolute', top:14, left:14, background:`linear-gradient(135deg,${G},#CDB07A)`, color:C, fontSize:9, letterSpacing:'0.2em', textTransform:'uppercase', padding:'4px 10px', fontFamily:sans }}>
                 {product.badge}
               </div>
             )}
@@ -191,19 +188,19 @@ export default function ProductDetail() {
             {allImages.length > 1 && (
               <>
                 <button className="nav-arrow" onClick={prevImage}
-                  style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', width:44, height:44, borderRadius:'50%', background:'rgba(253,251,247,0.92)', border:'none', cursor:'pointer', fontSize:20, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 12px rgba(42,31,14,0.15)', transition:'all 0.2s', zIndex:2 }}
-                  onMouseEnter={e=>e.currentTarget.style.background='rgba(253,251,247,1)'}
-                  onMouseLeave={e=>e.currentTarget.style.background='rgba(253,251,247,0.92)'}>
+                  style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', width:44, height:44, borderRadius:'50%', background:'rgba(250,250,248,0.92)', border:'none', cursor:'pointer', fontSize:20, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 12px rgba(43,41,38,0.15)', transition:'all 0.2s', zIndex:2 }}
+                  onMouseEnter={e=>e.currentTarget.style.background='rgba(250,250,248,1)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='rgba(250,250,248,0.92)'}>
                   ‹
                 </button>
                 <button className="nav-arrow" onClick={nextImage}
-                  style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', width:44, height:44, borderRadius:'50%', background:'rgba(253,251,247,0.92)', border:'none', cursor:'pointer', fontSize:20, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 12px rgba(42,31,14,0.15)', transition:'all 0.2s', zIndex:2 }}
-                  onMouseEnter={e=>e.currentTarget.style.background='rgba(253,251,247,1)'}
-                  onMouseLeave={e=>e.currentTarget.style.background='rgba(253,251,247,0.92)'}>
+                  style={{ position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', width:44, height:44, borderRadius:'50%', background:'rgba(250,250,248,0.92)', border:'none', cursor:'pointer', fontSize:20, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 12px rgba(43,41,38,0.15)', transition:'all 0.2s', zIndex:2 }}
+                  onMouseEnter={e=>e.currentTarget.style.background='rgba(250,250,248,1)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='rgba(250,250,248,0.92)'}>
                   ›
                 </button>
                 {/* Image counter */}
-                <div style={{ position:'absolute', bottom:12, right:12, background:'rgba(42,31,14,0.5)', color:C, fontSize:10, padding:'3px 8px', borderRadius:20, fontFamily:sans }}>
+                <div style={{ position:'absolute', bottom:12, right:12, background:'rgba(43,41,38,0.5)', color:C, fontSize:10, padding:'3px 8px', borderRadius:20, fontFamily:sans }}>
                   {activeIndex+1} / {allImages.length}
                 </div>
               </>
@@ -236,18 +233,31 @@ export default function ProductDetail() {
 
           <h1 style={{ fontSize:34, fontWeight:400, fontFamily:serif, color:D, lineHeight:1.2 }}>{product.name}</h1>
 
-          <div style={{ display:'flex', alignItems:'center', gap:12, paddingBottom:18, borderBottom:`1px solid rgba(193,152,60,0.15)` }}>
-            <span style={{ fontSize:26, fontWeight:600, fontFamily:serif, color:D }}>Rp {(product.price||0).toLocaleString('id-ID')}</span>
-            <span style={{ fontSize:11, color:'#6B9B6B', background:'#E8F5E8', padding:'3px 10px', borderRadius:20 }}>Stok: {product.stock||20}</span>
+          <div style={{ paddingBottom:18, borderBottom:`1px solid rgba(184,151,90,0.15)` }}>
+            <div style={{ display:'flex', alignItems:'baseline', gap:8, flexWrap:'wrap' }}>
+              <span style={{ fontSize:26, fontWeight:600, fontFamily:serif, color:D }}>{rp(unitPrice(product,1))}</span>
+              <span style={{ fontSize:12, color:'#8A8680' }}>/ pcs · harga normal</span>
+            </div>
+            <div style={{ marginTop:8, display:'inline-block', fontSize:11, color:G, border:'1px solid rgba(184,151,90,0.4)', padding:'3px 10px', borderRadius:20 }}>1 seri = {spp} pcs (semua warna) · {rp(unitPrice(product,1)*spp)}</div>
           </div>
 
-          <p style={{ fontSize:13, lineHeight:1.85, color:'#7A6040', fontWeight:300 }}>{product.description}</p>
+          {/* TIER TABLE */}
+          <div style={{ border:'1px solid rgba(184,151,90,0.2)', borderRadius:4, overflow:'hidden' }}>
+            {[[1,'Tier 1','Harga normal'],[2,'Tier 2','Total belanja > '+rp(TIER2_MIN)],[3,'Tier 3','Total belanja > '+rp(TIER3_MIN)]].map(([t,n,c])=>(
+              <div key={t} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 14px', background: cartTier===t?'rgba(184,151,90,0.12)':'transparent', borderBottom: t<3?'1px solid rgba(184,151,90,0.12)':'none', fontSize:12 }}>
+                <span style={{ color:D }}><b style={{ color:G }}>{n}</b> <span style={{ color:'#8A8680', fontSize:11 }}>· {c}</span></span>
+                <span style={{ fontFamily:serif, fontSize:15, fontWeight:600, color:D }}>{rp(unitPrice(product,t))}<span style={{ fontSize:10, color:'#8A8680', fontWeight:400 }}>/pcs</span></span>
+              </div>
+            ))}
+          </div>
+
+          <p style={{ fontSize:13, lineHeight:1.85, color:'#6B6862', fontWeight:300 }}>{product.description}</p>
 
           {/* COLOR SELECTOR */}
           {colorList.length > 0 && (
             <div>
-              <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:'#9A8060', marginBottom:10 }}>
-                Warna: <span style={{ color:D, fontWeight:600 }}>{selectedColor}</span>
+              <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:'#8A8680', marginBottom:10 }}>
+                Warna dalam 1 seri: <span style={{ color:D, fontWeight:600 }}>{colorList.length} warna</span>
               </div>
               <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                 {colorList.map(cn => {
@@ -255,7 +265,7 @@ export default function ProductDetail() {
                   const isSelected = selectedColor === cn
                   return (
                     <button key={cn} onClick={() => selectColor(cn)}
-                      style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', border:`2px solid`, borderColor: isSelected ? D : 'rgba(193,152,60,0.2)', borderRadius:4, background: isSelected ? D : 'transparent', cursor:'pointer', transition:'all 0.2s' }}>
+                      style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', border:`2px solid`, borderColor: isSelected ? D : 'rgba(184,151,90,0.2)', borderRadius:4, background: isSelected ? D : 'transparent', cursor:'pointer', transition:'all 0.2s' }}>
                       {colorObj?.image_url ? (
                         <img src={colorObj.image_url} alt={cn} style={{ width:20, height:20, objectFit:'cover', borderRadius:2, flexShrink:0 }} />
                       ) : (
@@ -269,81 +279,52 @@ export default function ProductDetail() {
             </div>
           )}
 
-          {/* SIZE SELECTOR */}
-          {sizeList.length > 0 && (
-            <div>
-              <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:'#9A8060', marginBottom:10 }}>
-                Ukuran: <span style={{ color:D, fontWeight:600 }}>{selectedSize}</span>
-              </div>
-              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                {sizeList.map(s => (
-                  <button key={s} onClick={() => setSelectedSize(s)}
-                    style={{ width:44, height:44, border:`2px solid`, borderColor: selectedSize===s ? D : 'rgba(193,152,60,0.2)', borderRadius:4, background: selectedSize===s ? D : 'transparent', color: selectedSize===s ? C : D, fontSize:12, cursor:'pointer', fontFamily:sans, fontWeight: selectedSize===s ? 700 : 400, transition:'all 0.2s' }}>
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* QTY */}
           <div>
-            <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:'#9A8060', marginBottom:10 }}>Jumlah</div>
-            <div style={{ display:'flex', alignItems:'center', width:'fit-content', border:`1px solid rgba(193,152,60,0.25)`, borderRadius:4, overflow:'hidden' }}>
+            <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:'#8A8680', marginBottom:10 }}>Jumlah (seri)</div>
+            <div style={{ display:'flex', alignItems:'center', width:'fit-content', border:`1px solid rgba(184,151,90,0.25)`, borderRadius:4, overflow:'hidden' }}>
               <button onClick={() => setQty(q => Math.max(1,q-1))} style={{ width:40, height:40, border:'none', background:LB, cursor:'pointer', fontSize:18, color:D, transition:'background 0.2s' }}
-                onMouseEnter={e=>e.currentTarget.style.background='#E8D5A8'}
+                onMouseEnter={e=>e.currentTarget.style.background='#E2DED7'}
                 onMouseLeave={e=>e.currentTarget.style.background=LB}>−</button>
-              <span style={{ width:48, height:40, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:600, color:D, borderLeft:`1px solid rgba(193,152,60,0.2)`, borderRight:`1px solid rgba(193,152,60,0.2)` }}>{qty}</span>
+              <span style={{ width:48, height:40, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:600, color:D, borderLeft:`1px solid rgba(184,151,90,0.2)`, borderRight:`1px solid rgba(184,151,90,0.2)` }}>{qty}</span>
               <button onClick={() => setQty(q => q+1)} style={{ width:40, height:40, border:'none', background:LB, cursor:'pointer', fontSize:18, color:D, transition:'background 0.2s' }}
-                onMouseEnter={e=>e.currentTarget.style.background='#E8D5A8'}
+                onMouseEnter={e=>e.currentTarget.style.background='#E2DED7'}
                 onMouseLeave={e=>e.currentTarget.style.background=LB}>+</button>
             </div>
+            <div style={{ fontSize:11, color:'#8A8680', marginTop:8 }}>= {qty*spp} pcs · {rp(unitPrice(product,1)*spp*qty)} (harga normal)</div>
           </div>
 
           {/* BUTTONS */}
           <div style={{ display:'flex', gap:12, flexWrap:'wrap', paddingTop:8 }}>
             <button onClick={handleAddToCart}
-              style={{ flex:1, minWidth:140, padding:'14px 24px', background:`linear-gradient(135deg,${G},#D4AA50,${G})`, color:C, border:'none', borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans, boxShadow:'0 6px 20px rgba(193,152,60,0.3)', transition:'all 0.3s' }}
-              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 10px 28px rgba(193,152,60,0.45)'}}
-              onMouseLeave={e=>{e.currentTarget.style.transform='none';e.currentTarget.style.boxShadow='0 6px 20px rgba(193,152,60,0.3)'}}>
-              + Keranjang
+              style={{ flex:1, minWidth:140, padding:'14px 24px', background:`linear-gradient(135deg,${G},#CDB07A,${G})`, color:C, border:'none', borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans, boxShadow:'0 6px 20px rgba(184,151,90,0.3)', transition:'all 0.3s' }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 10px 28px rgba(184,151,90,0.45)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='none';e.currentTarget.style.boxShadow='0 6px 20px rgba(184,151,90,0.3)'}}>
+              + Keranjang Order
             </button>
             <button onClick={handleBuyNow}
               style={{ flex:1, minWidth:140, padding:'14px 24px', background:D, color:C, border:'none', borderRadius:2, fontSize:11, letterSpacing:'0.2em', textTransform:'uppercase', cursor:'pointer', fontFamily:sans, transition:'all 0.3s' }}
               onMouseEnter={e=>e.currentTarget.style.opacity='0.85'}
               onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
-              Beli Sekarang
+              Order Sekarang
             </button>
           </div>
 
-          {/* SHIPPING INFO */}
-          <div style={{ background:LB, borderRadius:4, padding:'16px', border:`1px solid rgba(193,152,60,0.12)` }}>
-            <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G, marginBottom:10 }}>Info Pengiriman</div>
-            <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
-              {[
-                ['🚚','Zona 1 — Jawa & Bali','Gratis'],
-                ['📦','Zona 2 — Sumatera, Kalimantan, Sulawesi','Rp 15.000 / kg'],
-                ['📦','Zona 3 — NTB, NTT, Maluku','Rp 25.000 / kg'],
-                ['📦','Zona 4 — Papua','Rp 35.000 / kg'],
-              ].map(([icon,zone,rate]) => (
-                <div key={zone} style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:'#7A6040', gap:8 }}>
-                  <span>{icon} {zone}</span>
-                  <span style={{ fontWeight:600, color:D, flexShrink:0 }}>{rate}</span>
-                </div>
-              ))}
-            </div>
+          <div style={{ background:LB, borderRadius:4, padding:'16px', border:`1px solid rgba(184,151,90,0.12)`, fontSize:12, color:'#6B6862', lineHeight:1.8 }}>
+            <div style={{ fontSize:10, letterSpacing:'0.2em', textTransform:'uppercase', color:G, marginBottom:6 }}>Info Order</div>
+            Minimal order 1 seri per model (ambil semua warna). Ongkir dikonfirmasi terpisah via WhatsApp setelah pesanan masuk.
           </div>
 
-          <div style={{ fontSize:11, color:'#9A8060' }}>⚖️ Berat: {product.weight||300}g</div>
+          <div style={{ fontSize:11, color:'#8A8680' }}>⚖️ Berat: ± {product.weight||300}g / pcs</div>
         </div>
       </div>
 
       {/* RELATED PRODUCTS */}
       {related.length > 0 && (
-        <section style={{ padding:'48px 48px 80px', borderTop:`1px solid rgba(193,152,60,0.1)` }}>
+        <section style={{ padding:'48px 48px 80px', borderTop:`1px solid rgba(184,151,90,0.1)` }}>
           <style>{`@media(max-width:768px){.related-pad{padding:32px 24px 56px !important}}`}</style>
           <div style={{ marginBottom:32 }}>
-            <div style={{ fontSize:10, letterSpacing:'0.3em', textTransform:'uppercase', color:G, marginBottom:8 }}>✦ Mungkin Kamu Suka</div>
+            <div style={{ fontSize:10, letterSpacing:'0.3em', textTransform:'uppercase', color:G, marginBottom:8 }}>✦ Model Lainnya</div>
             <h2 style={{ fontSize:28, fontWeight:400, fontFamily:serif, color:D }}>Produk <span style={{ fontStyle:'italic', color:G }}>Serupa</span></h2>
           </div>
           <div className="prod-grid">
@@ -353,13 +334,13 @@ export default function ProductDetail() {
                 <Link key={p.id} to={`/shop/${p.slug}`} style={{ textDecoration:'none', color:'inherit', display:'block', transition:'transform 0.3s' }}
                   onMouseEnter={e=>e.currentTarget.style.transform='translateY(-5px)'}
                   onMouseLeave={e=>e.currentTarget.style.transform='none'}>
-                  <div className="prod-img" style={{ borderRadius:4, background:thumb?'none':(p.bg||'linear-gradient(145deg,#F0E4C8,#E8D5A8)'), display:'flex', alignItems:'center', justifyContent:'center', marginBottom:12, border:'1px solid rgba(193,152,60,0.15)', overflow:'hidden', position:'relative' }}>
+                  <div className="prod-img" style={{ borderRadius:4, background:thumb?'none':(p.bg||'linear-gradient(145deg,#ECE9E4,#E2DED7)'), display:'flex', alignItems:'center', justifyContent:'center', marginBottom:12, border:'1px solid rgba(184,151,90,0.15)', overflow:'hidden', position:'relative' }}>
                     {thumb ? <img src={thumb} alt={p.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <span style={{ fontSize:48 }}>👗</span>}
-                    {p.badge && <div style={{ position:'absolute', top:10, left:10, background:`linear-gradient(135deg,${G},#D4AA50)`, color:C, fontSize:8, padding:'3px 8px', fontFamily:sans }}>{p.badge}</div>}
+                    {p.badge && <div style={{ position:'absolute', top:10, left:10, background:`linear-gradient(135deg,${G},#CDB07A)`, color:C, fontSize:8, padding:'3px 8px', fontFamily:sans }}>{p.badge}</div>}
                   </div>
                   <div style={{ fontSize:14, fontFamily:serif, color:D, marginBottom:2 }}>{p.name}</div>
                   <div style={{ fontSize:9, color:G, letterSpacing:'0.2em', textTransform:'uppercase', marginBottom:6 }}>{p.category}</div>
-                  <div style={{ fontSize:14, fontWeight:600, fontFamily:serif, color:D }}>Rp {(p.price||0).toLocaleString('id-ID')}</div>
+                  <div style={{ fontSize:14, fontWeight:600, fontFamily:serif, color:D }}>{rp(unitPrice(p,1))} <span style={{ fontSize:10, color:'#8A8680', fontWeight:400 }}>/pcs · seri {seriesQty(p)}</span></div>
                 </Link>
               )
             })}

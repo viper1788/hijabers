@@ -1,14 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Didact+Gothic&display=swap');
 
 :root {
-  --gold: #C1983C;
-  --gold-light: #D4AA50;
-  --gold-dark: #B8891E;
-  --dark: #2A1F0E;
-  --cream: #FDFBF7;
-  --light-bg: #F7F2E8;
-  --card-bg: #F0E4C8;
-  --muted: #9A8060;
+  --gold: #B8975A;
+  --gold-light: #CDB07A;
+  --gold-dark: #9C7C3E;
+  --dark: #2B2926;
+  --cream: #FAFAF8;
+  --light-bg: #F2F0EC;
+  --card-bg: #ECE9E4;
+  --muted: #8A8680;
   --serif: 'Cormorant Garamond', serif;
   --sans: 'Didact Gothic', sans-serif;
 }
@@ -26,7 +26,7 @@ a { text-decoration: none; color: inherit; }
 .nav-links { display:flex; gap:36px; align-items:center; }
 .hamburger { display:none; background:none; border:none; cursor:pointer; font-size:22px; color:var(--dark); padding:4px; }
 .mobile-menu { display:none; }
-.mobile-menu-item { display:block; padding:14px 24px; font-size:11px; letter-spacing:0.18em; color:#5C4A2A; text-transform:uppercase; border-bottom:1px solid rgba(193,152,60,0.08); cursor:pointer; font-family:var(--sans); text-decoration:none; }
+.mobile-menu-item { display:block; padding:14px 24px; font-size:11px; letter-spacing:0.18em; color:#55524D; text-transform:uppercase; border-bottom:1px solid rgba(184,151,90,0.08); cursor:pointer; font-family:var(--sans); text-decoration:none; }
 
 /* HERO */
 .hero-grid { display:grid; grid-template-columns:1fr 1fr; min-height:100vh; padding:88px 48px 48px; gap:48px; align-items:center; }
@@ -57,12 +57,12 @@ a { text-decoration: none; color: inherit; }
 
 /* BUTTONS */
 .btn-gold { background:linear-gradient(135deg,var(--gold),var(--gold-light),var(--gold)); color:var(--cream); border:none; cursor:pointer; font-family:var(--sans); letter-spacing:0.2em; text-transform:uppercase; transition:all 0.3s ease; }
-.btn-gold:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(193,152,60,0.35); }
-.btn-outline { background:transparent; color:var(--dark); border:1px solid rgba(42,31,14,0.25); cursor:pointer; font-family:var(--sans); letter-spacing:0.2em; text-transform:uppercase; transition:all 0.3s; }
+.btn-gold:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(184,151,90,0.35); }
+.btn-outline { background:transparent; color:var(--dark); border:1px solid rgba(43,41,38,0.25); cursor:pointer; font-family:var(--sans); letter-spacing:0.2em; text-transform:uppercase; transition:all 0.3s; }
 .btn-outline:hover { border-color:var(--gold); color:var(--gold); }
 
 /* FORM */
-.form-input { width:100%; padding:11px 14px; border:1px solid rgba(193,152,60,0.25); border-radius:4px; font-size:13px; font-family:var(--sans); background:var(--light-bg); color:var(--dark); outline:none; transition:border-color 0.2s; }
+.form-input { width:100%; padding:11px 14px; border:1px solid rgba(184,151,90,0.25); border-radius:4px; font-size:13px; font-family:var(--sans); background:var(--light-bg); color:var(--dark); outline:none; transition:border-color 0.2s; }
 .form-input:focus { border-color:var(--gold); }
 .form-label { font-size:9px; letter-spacing:0.2em; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:6px; font-family:var(--sans); }
 
@@ -76,7 +76,7 @@ a { text-decoration: none; color: inherit; }
 @media (max-width: 768px) {
   .nav-links { display:none; }
   .hamburger { display:block; }
-  .mobile-menu { display:flex; flex-direction:column; position:fixed; top:64px; left:0; right:0; background:rgba(253,251,247,0.98); backdrop-filter:blur(16px); border-bottom:1px solid rgba(193,152,60,0.15); z-index:99; padding:8px 0; box-shadow:0 8px 32px rgba(42,31,14,0.08); }
+  .mobile-menu { display:flex; flex-direction:column; position:fixed; top:64px; left:0; right:0; background:rgba(250,250,248,0.98); backdrop-filter:blur(16px); border-bottom:1px solid rgba(184,151,90,0.15); z-index:99; padding:8px 0; box-shadow:0 8px 32px rgba(43,41,38,0.08); }
   .hero-grid { grid-template-columns:1fr; min-height:auto; padding:88px 24px 48px; gap:0; }
   .hero-right { display:none; }
   .hero-right-mobile { display:flex; align-items:center; justify-content:center; position:relative; height:240px; margin-bottom:28px; }
