@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js'
+import { CATEGORIES as DEFAULT_CATEGORIES } from '../data/products.js'
 
 // ─────────────────────────────────────────
 // AUTH
@@ -183,3 +184,41 @@ export function buildWhatsAppMessage(order) {
 }
 
 export const WA_NUMBER = '6208561010367'
+
+
+// ─────────────────────────────────────────
+// CATEGORIES
+// ─────────────────────────────────────────
+
+// Daftar nama kategori (urut). Fallback ke daftar bawaan bila tabel belum ada.
+export async function getCategories() {
+  try {
+    const { data, error } = await supabase.from('categories').select('name').order('sort_order').order('id')
+    if (error || !data || data.length === 0) return DEFAULT_CATEGORIES
+    return data.map(c => c.name)
+  } catch { return DEFAULT_CATEGORIES }
+}
+
+export async function addCategory(name) {
+  const { data: last } = await supabase.from('categories').select('sort_order').order('sort_order', { ascending: false }).limit(1)
+  const next = (last?.[0]?.sort_order || 0) + 1
+  const { error } = await supabase.from('categories').insert([{ name: name.trim(), sort_order: next }])
+  if (error) throw error
+}
+
+export async function renameCategory(oldName, newName) {
+  const n = newName.trim()
+  const { error } = await supabase.from('categories').update({ name: n }).eq('name', oldName)
+  if (error) throw error
+  const { error: e2 } = await supabase.from('products').update({ category: n }).eq('category', oldName)
+  if (e2) throw e2
+}
+
+// Hanya boleh hapus kategori yang tidak punya produk
+export async function deleteCategory(name) {
+  const { count, error: e1 } = await supabase.from('products').select('id', { count: 'exact', head: true }).eq('category', name)
+  if (e1) throw e1
+  if (count > 0) throw new Error(`Masih ada ${count} produk di kategori ini. Pindahkan produknya dulu.`)
+  const { error } = await supabase.from('categories').delete().eq('name', name)
+  if (error) throw error
+}
