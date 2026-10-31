@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { getAllOrders, updateOrderStatus, getAllProducts, createProduct, updateProduct, deleteProduct, signIn, signOut, getSession } from '../lib/api.js'
-import { CATEGORIES } from '../data/products.js'
+import { getAllOrders, updateOrderStatus, getAllProducts, createProduct, updateProduct, deleteProduct, signIn, signOut, getSession, getCategories, addCategory, renameCategory, deleteCategory } from '../lib/api.js'
 
 const G = "#B8975A", D = "#2B2926", C = "#FAFAF8", LB = "#F2F0EC"
 const serif = "'Cormorant Garamond',serif"
@@ -196,10 +195,10 @@ function FolderBrowser({ onSelectImages, onSelectColorImage, colorImages, select
 }
 
 // ── PRODUCT FORM ──
-function ProductForm({ editItem, onSave, onClose }) {
+function ProductForm({ editItem, onSave, onClose, categories }) {
   const [form, setForm] = useState({
     name: editItem?.name || '',
-    category: editItem?.category || 'Wide Pants',
+    category: editItem?.category || categories[0] || '',
     price_tier1: String(editItem?.price_tier1 ?? editItem?.price ?? ''),
     price_tier2: editItem?.price_tier2 ? String(editItem.price_tier2) : '',
     price_tier3: editItem?.price_tier3 ? String(editItem.price_tier3) : '',
@@ -301,7 +300,7 @@ function ProductForm({ editItem, onSave, onClose }) {
               <div>
                 <label className="form-label">Kategori</label>
                 <select value={form.category} onChange={e=>setForm(p=>({...p,category:e.target.value}))} className="form-input" style={{ cursor:'pointer' }}>
-                  {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+                  {[...new Set([...(editItem?.category?[editItem.category]:[]), ...categories])].map(c=><option key={c}>{c}</option>)}
                 </select>
               </div>
             </div>
@@ -530,6 +529,8 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [orders, setOrders] = useState([])
   const [products, setProducts] = useState([])
+  const [categories, setCategories] = useState([])
+  const [newCat, setNewCat] = useState('')
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState(null)
   const [showForm, setShowForm] = useState(false)
@@ -550,8 +551,8 @@ export default function Admin() {
   async function loadData() {
     setLoading(true)
     try {
-      const [o,p] = await Promise.all([getAllOrders(), getAllProducts()])
-      setOrders(o||[]); setProducts(p||[])
+      const [o,p,c] = await Promise.all([getAllOrders(), getAllProducts(), getCategories()])
+      setOrders(o||[]); setProducts(p||[]); setCategories(c||[])
     } catch { showToast('Gagal memuat data','error') }
     finally { setLoading(false) }
   }
@@ -578,6 +579,25 @@ export default function Admin() {
     }
   }
 
+  async function handleAddCategory() {
+    const n = newCat.trim()
+    if (!n) return
+    if (categories.some(c => c.toLowerCase() === n.toLowerCase())) { showToast('Kategori sudah ada','error'); return }
+    try { await addCategory(n); setNewCat(''); showToast('Kategori ditambahkan'); loadData() }
+    catch(e) { showToast('Gagal: '+e.message,'error') }
+  }
+  async function handleRenameCategory(old) {
+    const n = window.prompt('Nama baru untuk kategori "'+old+'":', old)
+    if (!n || !n.trim() || n.trim() === old) return
+    try { await renameCategory(old, n); showToast('Kategori diubah'); loadData() }
+    catch(e) { showToast('Gagal: '+e.message,'error') }
+  }
+  async function handleDeleteCategory(name) {
+    if (!window.confirm('Hapus kategori "'+name+'"?')) return
+    try { await deleteCategory(name); showToast('Kategori dihapus'); loadData() }
+    catch(e) { showToast(e.message,'error') }
+  }
+
   async function handleDeleteProduct(id) {
     if (!window.confirm('Hapus produk ini?')) return
     try { await deleteProduct(id); setProducts(prev=>prev.filter(p=>p.id!==id)); showToast('Produk dihapus!') }
@@ -592,7 +612,7 @@ export default function Admin() {
 
   if (!loggedIn) return <LoginScreen onLogin={()=>setLoggedIn(true)} />
 
-  const tabs = [{ id:'dashboard', icon:'📊', label:'Dashboard' },{ id:'orders', icon:'📦', label:'Orders' },{ id:'products', icon:'🧥', label:'Produk' }]
+  const tabs = [{ id:'dashboard', icon:'📊', label:'Dashboard' },{ id:'orders', icon:'📦', label:'Orders' },{ id:'products', icon:'🧥', label:'Produk' },{ id:'categories', icon:'🗂️', label:'Kategori' }]
   const newOrders = orders.filter(o=>o.status==='baru').length
   const totalRevenue = orders.filter(o=>o.status==='selesai').reduce((s,o)=>s+(o.total||0),0)
 
@@ -601,7 +621,7 @@ export default function Admin() {
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={()=>setToast(null)} />}
 
       {showForm && (
-        <ProductForm editItem={editItem} onSave={handleSaveProduct} onClose={()=>{setShowForm(false);setEditItem(null)}} />
+        <ProductForm categories={categories} editItem={editItem} onSave={handleSaveProduct} onClose={()=>{setShowForm(false);setEditItem(null)}} />
       )}
 
       {/* SIDEBAR */}
@@ -693,6 +713,34 @@ export default function Admin() {
                   <h1 style={{ fontSize:28, fontWeight:400, fontFamily:serif, color:D }}>Daftar Order</h1>
                 </div>
                 <OrdersTab orders={orders} onStatusChange={handleStatusChange} />
+              </div>
+            )}
+
+            {activeTab==='categories' && (
+              <div style={{ maxWidth:560 }}>
+                <div style={{ marginBottom:24 }}>
+                  <div style={{ fontSize:10, letterSpacing:'0.3em', textTransform:'uppercase', color:G, marginBottom:6 }}>Management</div>
+                  <h1 style={{ fontSize:28, fontWeight:400, fontFamily:serif, color:D }}>Kelola Kategori</h1>
+                </div>
+                <div style={{ display:'flex', gap:8, marginBottom:20 }}>
+                  <input value={newCat} onChange={e=>setNewCat(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleAddCategory()} className="form-input" placeholder="Nama kategori baru" />
+                  <button onClick={handleAddCategory} style={{ padding:'10px 20px', background:D, color:C, border:'none', borderRadius:4, fontSize:11, cursor:'pointer', fontFamily:sans, whiteSpace:'nowrap' }}>+ Tambah</button>
+                </div>
+                <div style={{ background:C, borderRadius:8, border:'1px solid rgba(184,151,90,0.15)', overflow:'hidden' }}>
+                  {categories.map(c => {
+                    const n = products.filter(p => p.category === c).length
+                    return (
+                      <div key={c} style={{ display:'flex', alignItems:'center', gap:10, padding:'12px 16px', borderBottom:'1px solid rgba(184,151,90,0.1)' }}>
+                        <span style={{ flex:1, fontSize:13, color:D, fontWeight:600 }}>{c}</span>
+                        <span style={{ fontSize:11, color:'#8A8680' }}>{n} produk</span>
+                        <button onClick={()=>handleRenameCategory(c)} style={{ padding:'5px 12px', border:'1px solid rgba(184,151,90,0.3)', borderRadius:4, background:'transparent', fontSize:11, cursor:'pointer', color:D, fontFamily:sans }}>Ganti nama</button>
+                        <button onClick={()=>handleDeleteCategory(c)} disabled={n>0} title={n>0?'Masih ada produk':'Hapus'} style={{ padding:'5px 12px', border:'none', borderRadius:4, background:n>0?'#EEE':'#FEE2E2', color:n>0?'#AAA':'#991B1B', fontSize:11, cursor:n>0?'not-allowed':'pointer', fontFamily:sans }}>Hapus</button>
+                      </div>
+                    )
+                  })}
+                  {categories.length === 0 && <div style={{ padding:20, fontSize:12, color:'#8A8680' }}>Belum ada kategori.</div>}
+                </div>
+                <p style={{ fontSize:11, color:'#8A8680', marginTop:12, lineHeight:1.7 }}>Kategori hanya bisa dihapus jika tidak ada produknya. Mengganti nama otomatis memindahkan semua produk di dalamnya.</p>
               </div>
             )}
 

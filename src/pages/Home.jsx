@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { getAllProducts } from '../lib/api.js'
+import { getAllProducts, getCategories } from '../lib/api.js'
 import { products as localProducts, CATEGORIES } from '../data/products.js'
 import { rp, seriesQty, unitPrice, TIER2_MIN, TIER3_MIN } from '../lib/pricing.js'
 
@@ -24,6 +24,7 @@ export default function Home() {
   const [products, setProducts] = useState([])
   const [categoryImages, setCategoryImages] = useState({})
   const [loading, setLoading] = useState(true)
+  const [cats, setCats] = useState(CATEGORIES)
   const navigate = useNavigate()
   const catRef = useRef(null)
   const shopRef = useRef(null)
@@ -39,10 +40,12 @@ export default function Home() {
     try {
       const data = await getAllProducts()
       const prods = data && data.length > 0 ? data : localProducts
+      const cs = await getCategories()
+      setCats(cs)
       setProducts(prods)
       // Build category images map
       const catImgs = {}
-      CATEGORIES.forEach(cat => {
+      cs.forEach(cat => {
         const catProds = prods.filter(p => p.category === cat)
         const withImg = catProds.find(p => p.images?.[0])
         if (withImg) catImgs[cat] = withImg.images[0]
@@ -57,7 +60,7 @@ export default function Home() {
   const displayProducts = featured.length > 0 ? featured : products.slice(0, 3)
 
   // Only show categories that have at least 1 product
-  const activeCategories = CATEGORIES.filter(cat => products.some(p => p.category === cat))
+  const activeCategories = cats.filter(cat => products.some(p => p.category === cat))
 
   return (
     <div style={{ fontFamily:sans }}>

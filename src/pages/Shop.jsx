@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { getAllProducts } from '../lib/api.js'
+import { getAllProducts, getCategories } from '../lib/api.js'
 import { products as localProducts, CATEGORIES } from '../data/products.js'
 import { rp, seriesQty, unitPrice } from '../lib/pricing.js'
 
@@ -82,6 +82,7 @@ export default function Shop() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [cats, setCats] = useState(CATEGORIES)
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('default')
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
@@ -96,10 +97,12 @@ export default function Shop() {
     try {
       const data = await getAllProducts()
       const prods = data && data.length > 0 ? data : localProducts
+      const cs = await getCategories()
+      setCats(cs)
       setProducts(prods)
       // Build category representative images
       const catImgs = {}
-      CATEGORIES.forEach(cat => {
+      cs.forEach(cat => {
         const catProds = prods.filter(p => p.category === cat)
         const withImg = catProds.find(p => p.images?.[0])
         if (withImg) catImgs[cat] = withImg.images[0]
@@ -128,7 +131,7 @@ export default function Shop() {
     })
 
   // Only show categories that have at least 1 product
-  const activeCategories = CATEGORIES.filter(cat => products.some(p => p.category === cat))
+  const activeCategories = cats.filter(cat => products.some(p => p.category === cat))
 
   return (
     <div style={{ fontFamily:sans, paddingTop:72 }}>
