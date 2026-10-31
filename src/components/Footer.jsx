@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { CATEGORIES, products as localProducts } from '../data/products.js';
-import { getAllProducts } from '../lib/api.js';
+import { getAllProducts, getCategories } from '../lib/api.js';
 
 const G = "#B8975A", D = "#2B2926", C = "#FAFAF8";
 
@@ -13,7 +13,8 @@ export default function Footer() {
       try {
         const data = await getAllProducts();
         const prods = data && data.length > 0 ? data : localProducts;
-        setActiveCategories(CATEGORIES.filter(cat => prods.some(p => p.category === cat)));
+        const cs = await getCategories();
+        setActiveCategories(cs.filter(cat => prods.some(p => p.category === cat)));
       } catch {
         setActiveCategories(CATEGORIES.filter(cat => localProducts.some(p => p.category === cat)));
       }
